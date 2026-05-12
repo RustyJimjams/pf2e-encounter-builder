@@ -122,7 +122,6 @@
 .manual-party-size {
   color: #e0d8cc !important;
   background: rgba(0, 0, 0, 0.4) !important;
-  width: 52px !important;
 }
 
 /* ---------------------------------------------------------------------------

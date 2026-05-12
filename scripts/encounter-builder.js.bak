@@ -112,6 +112,11 @@ export class EncounterBuilder extends Application {
   async getData() {
     const rawLevels = getPartyLevels();
     const { average, highest } = computePartyLevels(rawLevels);
+	
+	// Party level mode booleans for template
+	partyLevelModeAverage: this._partyLevelMode === "average",
+	partyLevelModeHighest: this._partyLevelMode === "highest",
+	partyLevelModeManual: this._partyLevelMode === "manual",
 
     // Resolve which party level is active
     const activePartyLevel = this._resolvePartyLevel(average, highest);
@@ -147,9 +152,6 @@ export class EncounterBuilder extends Application {
       manualPartyLevel: this._manualPartyLevel,
       partyLevelMode: this._partyLevelMode,
       activePartyLevel,
-      partyLevelModeAverage: this._partyLevelMode === "average",
-      partyLevelModeHighest: this._partyLevelMode === "highest",
-      partyLevelModeManual: this._partyLevelMode === "manual",
 
       // Encounter summary
       creatures,

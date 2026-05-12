@@ -15,30 +15,30 @@
       <label class="eb-label">Party Level</label>
       <div class="party-level-modes">
 
-        <button class="party-level-mode-btn {{#eq partyLevelMode 'average'}}active{{/eq}}"
+        <button class="party-level-mode-btn {{#if partyLevelModeAverage}}active{{/if}}"
                 data-mode="average"
                 title="Use average party level (rounded down)">
           Avg <span class="level-value">{{averageLevel}}</span>
         </button>
 
-        <button class="party-level-mode-btn {{#eq partyLevelMode 'highest'}}active{{/eq}}"
+        <button class="party-level-mode-btn {{#if partyLevelModeHighest}}active{{/if}}"
                 data-mode="highest"
                 title="Use highest character level">
           High <span class="level-value">{{highestLevel}}</span>
         </button>
 
-        <button class="party-level-mode-btn {{#eq partyLevelMode 'manual'}}active{{/eq}}"
+        <button class="party-level-mode-btn {{#if partyLevelModeManual}}active{{/if}}"
                 data-mode="manual"
                 title="Set party level manually">
           Manual
         </button>
 
-        {{#eq partyLevelMode 'manual'}}
+        {{#if partyLevelModeManual}}
           <input class="manual-party-level"
                  type="number" min="1" max="20"
                  value="{{manualPartyLevel}}"
                  title="Manual party level" />
-        {{/eq}}
+        {{/if}}
 
       </div>
     </div>
@@ -95,14 +95,13 @@
       </thead>
       <tbody>
         {{#each budgetBars}}
-          {{#unless (eq this.tier 'current')}}
+          {{#unless this.isCurrent}}
           <tr class="budget-row tier-{{this.tier}}">
             <td class="tier-label" style="color: {{this.color}}">{{this.label}}</td>
             <td class="tier-xp">{{this.xp}} XP</td>
             <td class="bar-col">
               <div class="budget-bar-track">
                 <div class="budget-bar-fill" style="width: {{this.pct}}%; background-color: {{this.color}}"></div>
-                {{!-- Current XP marker --}}
               </div>
             </td>
           </tr>
@@ -115,13 +114,13 @@
     <div class="current-xp-bar-wrap">
       <div class="current-xp-track">
         {{#each budgetBars}}
-          {{#eq this.tier 'current'}}
+          {{#if this.isCurrent}}
             <div class="current-xp-fill" style="width: {{this.pct}}%"></div>
-          {{/eq}}
+          {{/if}}
         {{/each}}
         {{!-- Tier threshold markers --}}
         {{#each budgetBars}}
-          {{#unless (eq this.tier 'current')}}
+          {{#unless this.isCurrent}}
             <div class="tier-marker" style="left: {{this.pct}}%; border-color: {{this.color}}"
                  title="{{this.label}}: {{this.xp}} XP"></div>
           {{/unless}}
@@ -160,16 +159,16 @@
             <span class="entry-level"
                   title="Base: {{this.baseLevel}} / Effective: {{this.effectiveLevel}}">
               Lvl {{this.effectiveLevel}}
-              {{#unless (eq this.adjustment 'none')}}
+              {{#unless this.adjustmentNone}}
                 <em class="adjustment-tag">({{this.adjustment}})</em>
               {{/unless}}
             </span>
 
             <div class="adjustment-btns">
-              <button class="adjustment-btn {{#eq this.adjustment 'elite'}}active{{/eq}}"
+              <button class="adjustment-btn {{#if this.adjustmentElite}}active{{/if}}"
                       data-adjustment="elite"
                       title="Elite (+1 level)">E</button>
-              <button class="adjustment-btn {{#eq this.adjustment 'weak'}}active{{/eq}}"
+              <button class="adjustment-btn {{#if this.adjustmentWeak}}active{{/if}}"
                       data-adjustment="weak"
                       title="Weak (-1 level)">W</button>
             </div>
