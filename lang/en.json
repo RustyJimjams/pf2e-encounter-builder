@@ -1,0 +1,70 @@
+{
+  "PF2EEB": {
+    "Title": "Encounter Builder",
+
+    "Party": {
+      "Title": "Party",
+      "PartyLevel": "Party Level",
+      "Average": "Avg",
+      "Highest": "High",
+      "Manual": "Manual",
+      "ActiveLevel": "Active Level:",
+      "PartySize": "Party Size",
+      "Detected": "Detected:",
+      "Override": "Override",
+      "PCs": "PCs"
+    },
+
+    "Budget": {
+      "Title": "XP Budget",
+      "Difficulty": "Difficulty",
+      "Budget": "Budget",
+      "NoEncounter": "No Encounter",
+      "Trivial": "Trivial",
+      "Low": "Low",
+      "Moderate": "Moderate",
+      "Severe": "Severe",
+      "Extreme": "Extreme",
+      "CurrentXP": "XP current"
+    },
+
+    "Creatures": {
+      "Title": "Creatures",
+      "Clear": "Clear",
+      "DropHint": "Drop creatures from any compendium",
+      "DropHintMore": "Drop more creatures here",
+      "Elite": "E",
+      "Weak": "W",
+      "EliteTitle": "Elite (+1 level)",
+      "WeakTitle": "Weak (-1 level)",
+      "Remove": "Remove",
+      "OutOfRange": "Outside ±4 level range — XP may be inaccurate"
+    },
+
+    "Hazards": {
+      "Title": "Hazards",
+      "Clear": "Clear",
+      "Collapse": "Collapse hazards",
+      "Expand": "Expand hazards",
+      "Simple": "Simple",
+      "Complex": "Complex",
+      "ComplexBonus": "+4",
+      "DropHint": "Drop hazards from any compendium",
+      "DropHintMore": "Drop more hazards here"
+    },
+
+    "Warnings": {
+      "BadDrop": "Encounter Builder: Could not read dropped data.",
+      "NotAnActor": "Encounter Builder: Only actors (creatures and hazards) can be dropped here.",
+      "ActorNotFound": "Encounter Builder: Could not find that actor."
+    },
+
+    "LevelPrompt": {
+      "Title": "Set Creature Level",
+      "Hint": "doesn't have a detectable level.",
+      "EnterLevel": "Enter its level manually:",
+      "Confirm": "Add to Encounter",
+      "Cancel": "Cancel"
+    }
+  }
+}

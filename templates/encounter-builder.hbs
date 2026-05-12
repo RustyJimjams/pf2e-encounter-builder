@@ -1,0 +1,270 @@
+{{!-- encounter-builder.hbs --}}
+{{!-- Main UI template for the PF2e Encounter Builder floating window --}}
+
+<div class="encounter-builder-app">
+
+  {{!-- ------------------------------------------------------------------ --}}
+  {{!-- PARTY SECTION                                                       --}}
+  {{!-- ------------------------------------------------------------------ --}}
+
+  <section class="eb-section party-section">
+    <h3 class="eb-section-title">Party</h3>
+
+    {{!-- Party Level Mode --}}
+    <div class="eb-row party-level-row">
+      <label class="eb-label">Party Level</label>
+      <div class="party-level-modes">
+
+        <button class="party-level-mode-btn {{#eq partyLevelMode 'average'}}active{{/eq}}"
+                data-mode="average"
+                title="Use average party level (rounded down)">
+          Avg <span class="level-value">{{averageLevel}}</span>
+        </button>
+
+        <button class="party-level-mode-btn {{#eq partyLevelMode 'highest'}}active{{/eq}}"
+                data-mode="highest"
+                title="Use highest character level">
+          High <span class="level-value">{{highestLevel}}</span>
+        </button>
+
+        <button class="party-level-mode-btn {{#eq partyLevelMode 'manual'}}active{{/eq}}"
+                data-mode="manual"
+                title="Set party level manually">
+          Manual
+        </button>
+
+        {{#eq partyLevelMode 'manual'}}
+          <input class="manual-party-level"
+                 type="number" min="1" max="20"
+                 value="{{manualPartyLevel}}"
+                 title="Manual party level" />
+        {{/eq}}
+
+      </div>
+    </div>
+
+    {{!-- Active Party Level display --}}
+    <div class="eb-row active-level-row">
+      <span class="active-level-label">Active Level:</span>
+      <span class="active-level-value">{{activePartyLevel}}</span>
+    </div>
+
+    {{!-- Party Size --}}
+    <div class="eb-row party-size-row">
+      <label class="eb-label">Party Size</label>
+      <div class="party-size-controls">
+        <span class="detected-size">Detected: {{detectedSize}}</span>
+        <label class="override-label">
+          <input class="party-size-override-toggle"
+                 type="checkbox"
+                 {{#if overridePartySize}}checked{{/if}} />
+          Override
+        </label>
+        {{#if overridePartySize}}
+          <input class="manual-party-size"
+                 type="number" min="1" max="12"
+                 value="{{manualPartySize}}"
+                 title="Manual party size" />
+        {{/if}}
+        <span class="active-size-badge">{{activePartySize}} PCs</span>
+      </div>
+    </div>
+  </section>
+
+  {{!-- ------------------------------------------------------------------ --}}
+  {{!-- XP BUDGET SECTION                                                   --}}
+  {{!-- ------------------------------------------------------------------ --}}
+
+  <section class="eb-section budget-section">
+    <h3 class="eb-section-title">
+      XP Budget
+      <span class="difficulty-badge" style="background-color: {{difficulty.color}}">
+        {{difficulty.label}}
+      </span>
+      <span class="total-xp">{{totalXP}} XP</span>
+    </h3>
+
+    {{!-- Tier budget table --}}
+    <table class="budget-table">
+      <thead>
+        <tr>
+          <th>Difficulty</th>
+          <th>Budget</th>
+          <th class="bar-col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each budgetBars}}
+          {{#unless (eq this.tier 'current')}}
+          <tr class="budget-row tier-{{this.tier}}">
+            <td class="tier-label" style="color: {{this.color}}">{{this.label}}</td>
+            <td class="tier-xp">{{this.xp}} XP</td>
+            <td class="bar-col">
+              <div class="budget-bar-track">
+                <div class="budget-bar-fill" style="width: {{this.pct}}%; background-color: {{this.color}}"></div>
+                {{!-- Current XP marker --}}
+              </div>
+            </td>
+          </tr>
+          {{/unless}}
+        {{/each}}
+      </tbody>
+    </table>
+
+    {{!-- Current XP progress bar --}}
+    <div class="current-xp-bar-wrap">
+      <div class="current-xp-track">
+        {{#each budgetBars}}
+          {{#eq this.tier 'current'}}
+            <div class="current-xp-fill" style="width: {{this.pct}}%"></div>
+          {{/eq}}
+        {{/each}}
+        {{!-- Tier threshold markers --}}
+        {{#each budgetBars}}
+          {{#unless (eq this.tier 'current')}}
+            <div class="tier-marker" style="left: {{this.pct}}%; border-color: {{this.color}}"
+                 title="{{this.label}}: {{this.xp}} XP"></div>
+          {{/unless}}
+        {{/each}}
+      </div>
+      <div class="current-xp-labels">
+        <span>0</span>
+        <span>{{totalXP}} XP current</span>
+      </div>
+    </div>
+  </section>
+
+  {{!-- ------------------------------------------------------------------ --}}
+  {{!-- CREATURES SECTION                                                   --}}
+  {{!-- ------------------------------------------------------------------ --}}
+
+  <section class="eb-section creatures-section">
+    <div class="eb-section-header">
+      <h3 class="eb-section-title">Creatures</h3>
+      {{#if hasCreatures}}
+        <button class="clear-creatures-btn eb-small-btn" title="Remove all creatures">
+          Clear
+        </button>
+      {{/if}}
+    </div>
+
+    {{!-- Creature list --}}
+    {{#if hasCreatures}}
+      <ul class="entry-list creature-list">
+        {{#each creatures}}
+          <li class="entry-row {{#if this.outOfRange}}out-of-range{{/if}}"
+              data-entry-id="{{this.id}}">
+
+            <span class="entry-name" title="{{this.name}}">{{this.name}}</span>
+
+            <span class="entry-level"
+                  title="Base: {{this.baseLevel}} / Effective: {{this.effectiveLevel}}">
+              Lvl {{this.effectiveLevel}}
+              {{#unless (eq this.adjustment 'none')}}
+                <em class="adjustment-tag">({{this.adjustment}})</em>
+              {{/unless}}
+            </span>
+
+            <div class="adjustment-btns">
+              <button class="adjustment-btn {{#eq this.adjustment 'elite'}}active{{/eq}}"
+                      data-adjustment="elite"
+                      title="Elite (+1 level)">E</button>
+              <button class="adjustment-btn {{#eq this.adjustment 'weak'}}active{{/eq}}"
+                      data-adjustment="weak"
+                      title="Weak (-1 level)">W</button>
+            </div>
+
+            <span class="entry-xp {{#if this.outOfRange}}warn{{/if}}"
+                  title="{{#if this.outOfRange}}Outside ±4 level range — XP may be inaccurate{{/if}}">
+              {{this.xp}} XP
+              {{#if this.outOfRange}}⚠{{/if}}
+            </span>
+
+            <button class="remove-entry-btn" title="Remove">✕</button>
+          </li>
+        {{/each}}
+      </ul>
+    {{/if}}
+
+    {{!-- Drop zone --}}
+    <div class="encounter-drop-zone {{#if hasCreatures}}compact{{/if}}">
+      <span class="drop-hint">
+        {{#if hasCreatures}}
+          Drop more creatures here
+        {{else}}
+          Drop creatures from any compendium
+        {{/if}}
+      </span>
+    </div>
+  </section>
+
+  {{!-- ------------------------------------------------------------------ --}}
+  {{!-- HAZARDS SECTION (collapsible)                                       --}}
+  {{!-- ------------------------------------------------------------------ --}}
+
+  <section class="eb-section hazards-section {{#if hazardsExpanded}}expanded{{/if}}">
+
+    <div class="eb-section-header">
+      <button class="hazards-toggle-btn eb-collapse-btn"
+              title="{{#if hazardsExpanded}}Collapse{{else}}Expand{{/if}} hazards">
+        <span class="collapse-icon">{{#if hazardsExpanded}}▾{{else}}▸{{/if}}</span>
+        <h3 class="eb-section-title">Hazards</h3>
+        {{#if hasHazards}}
+          <span class="hazard-count">({{hazards.length}})</span>
+        {{/if}}
+      </button>
+      {{#if hasHazards}}
+        <button class="clear-hazards-btn eb-small-btn" title="Remove all hazards">
+          Clear
+        </button>
+      {{/if}}
+    </div>
+
+    {{#if hazardsExpanded}}
+
+      {{#if hasHazards}}
+        <ul class="entry-list hazard-list">
+          {{#each hazards}}
+            <li class="entry-row {{#if this.outOfRange}}out-of-range{{/if}}"
+                data-entry-id="{{this.id}}">
+
+              <span class="entry-name" title="{{this.name}}">{{this.name}}</span>
+
+              <span class="hazard-type-tag">
+                {{#if this.isComplex}}Complex{{else}}Simple{{/if}}
+              </span>
+
+              <span class="entry-level"
+                    title="Listed: {{this.baseLevel}} / Effective: {{this.effectiveLevel}}">
+                Lvl {{this.effectiveLevel}}
+                {{#if this.isComplex}}
+                  <em class="adjustment-tag">(+4)</em>
+                {{/if}}
+              </span>
+
+              <span class="entry-xp {{#if this.outOfRange}}warn{{/if}}"
+                    title="{{#if this.outOfRange}}Outside ±4 level range — XP may be inaccurate{{/if}}">
+                {{this.xp}} XP
+                {{#if this.outOfRange}}⚠{{/if}}
+              </span>
+
+              <button class="remove-entry-btn" title="Remove">✕</button>
+            </li>
+          {{/each}}
+        </ul>
+      {{/if}}
+
+      <div class="hazard-drop-zone {{#if hasHazards}}compact{{/if}}">
+        <span class="drop-hint">
+          {{#if hasHazards}}
+            Drop more hazards here
+          {{else}}
+            Drop hazards from any compendium
+          {{/if}}
+        </span>
+      </div>
+
+    {{/if}}
+  </section>
+
+</div>

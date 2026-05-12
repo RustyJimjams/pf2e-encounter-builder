@@ -1,0 +1,11 @@
+{
+  "id": "pf2e-encounter-builder",
+  "title": "PF2e Encounter Builder",
+  "description": "A GM tool for planning PF2e encounters.",
+  "version": "0.1.0",
+  "authors": [{ "name": "Your Name Here" }],
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14"
+  }
+}

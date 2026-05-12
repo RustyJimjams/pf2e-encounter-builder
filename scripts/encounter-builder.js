@@ -1,0 +1,406 @@
+/**
+ * encounter-builder.js
+ * The main Application class for the PF2e Encounter Builder.
+ * Handles the floating window, party data reading, drag-and-drop,
+ * and wires everything to xp-calculator.js.
+ */
+
+import { MODULE_ID } from "./main.js";
+import {
+  computePartyLevels,
+  summarizeEncounter,
+  getBudgets,
+} from "./xp-calculator.js";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Reads all active player-owned characters from the world and returns
+ * their levels as an array.
+ * @returns {number[]}
+ */
+function getPartyLevels() {
+  return game.actors
+    .filter((a) => a.type === "character" && a.hasPlayerOwner && !a.isToken)
+    .map((a) => a.system.details.level.value ?? 1);
+}
+
+/**
+ * Attempts to extract the level of a dropped actor.
+ * Works for creatures, NPCs, and hazards in the PF2e system.
+ * @param {Actor} actor
+ * @returns {number|null}
+ */
+function getActorLevel(actor) {
+  return (
+    actor.system?.details?.level?.value ??
+    actor.system?.level?.value ??
+    null
+  );
+}
+
+/**
+ * Determines if a dropped actor is a hazard.
+ * PF2e hazard actors have type "hazard".
+ * @param {Actor} actor
+ * @returns {boolean}
+ */
+function isHazardActor(actor) {
+  return actor.type === "hazard";
+}
+
+/**
+ * Determines if a hazard actor is complex.
+ * Complex hazards have their own initiative — stored in system.details.isComplex.
+ * @param {Actor} actor
+ * @returns {boolean}
+ */
+function isComplexHazard(actor) {
+  return actor.system?.details?.isComplex ?? false;
+}
+
+/**
+ * Generates a simple unique ID for encounter entries.
+ * @returns {string}
+ */
+function uid() {
+  return Math.random().toString(36).slice(2, 9);
+}
+
+// ---------------------------------------------------------------------------
+// EncounterBuilder Application class
+// ---------------------------------------------------------------------------
+
+export class EncounterBuilder extends Application {
+
+  constructor(options = {}) {
+    super(options);
+
+    // Internal state — not persisted (v1 scope)
+    this._entries = [];          // Array of encounter entries (creatures + hazards)
+    this._partyLevelMode = game.settings.get(MODULE_ID, "partyLevelMode");
+    this._manualPartyLevel = game.settings.get(MODULE_ID, "manualPartyLevel");
+    this._manualPartySize = game.settings.get(MODULE_ID, "manualPartySize");
+    this._overridePartySize = game.settings.get(MODULE_ID, "overridePartySize");
+    this._hazardsExpanded = game.settings.get(MODULE_ID, "hazardsExpanded");
+  }
+
+  // ---------------------------------------------------------------------------
+  // Foundry Application config
+  // ---------------------------------------------------------------------------
+
+  static get defaultOptions() {
+    return foundry.utils.mergeObject(super.defaultOptions, {
+      id: "pf2e-encounter-builder",
+      title: "Encounter Builder",
+      template: "modules/pf2e-encounter-builder/templates/encounter-builder.hbs",
+      width: 520,
+      height: 680,
+      minWidth: 420,
+      minHeight: 480,
+      resizable: true,
+      classes: ["pf2e-encounter-builder"],
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Data — passed to the Handlebars template on every render
+  // ---------------------------------------------------------------------------
+
+  async getData() {
+    const rawLevels = getPartyLevels();
+    const { average, highest } = computePartyLevels(rawLevels);
+
+    // Resolve which party level is active
+    const activePartyLevel = this._resolvePartyLevel(average, highest);
+
+    // Resolve party size
+    const detectedSize = rawLevels.length || 4;
+    const activePartySize = this._overridePartySize
+      ? this._manualPartySize
+      : detectedSize;
+
+    // Run the encounter summary
+    const summary = summarizeEncounter(
+      this._entries,
+      activePartyLevel,
+      activePartySize
+    );
+
+    // Build budget bar data (for the progress display)
+    const budgetBars = this._buildBudgetBars(summary.totalXP, summary.budgets);
+
+    // Split entries into creatures and hazards for the template
+    const creatures = summary.entries.filter((e) => !e.isHazard);
+    const hazards   = summary.entries.filter((e) => e.isHazard);
+
+    return {
+      // Party info
+      detectedSize,
+      activePartySize,
+      overridePartySize: this._overridePartySize,
+      manualPartySize: this._manualPartySize,
+      averageLevel: average,
+      highestLevel: highest,
+      manualPartyLevel: this._manualPartyLevel,
+      partyLevelMode: this._partyLevelMode,
+      activePartyLevel,
+
+      // Encounter summary
+      creatures,
+      hazards,
+      totalXP: summary.totalXP,
+      difficulty: summary.difficulty,
+      budgets: summary.budgets,
+      budgetBars,
+
+      // UI state
+      hazardsExpanded: this._hazardsExpanded,
+      hasCreatures: creatures.length > 0,
+      hasHazards: hazards.length > 0,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Event listeners
+  // ---------------------------------------------------------------------------
+
+  activateListeners(html) {
+    super.activateListeners(html);
+
+    // Party level mode buttons
+    html.find(".party-level-mode-btn").on("click", (e) => {
+      const mode = e.currentTarget.dataset.mode;
+      this._setPartyLevelMode(mode);
+    });
+
+    // Manual party level input
+    html.find(".manual-party-level").on("change", (e) => {
+      const val = parseInt(e.currentTarget.value, 10);
+      if (!isNaN(val) && val >= 1 && val <= 20) {
+        this._manualPartyLevel = val;
+        game.settings.set(MODULE_ID, "manualPartyLevel", val);
+        this.render(false);
+      }
+    });
+
+    // Party size override toggle
+    html.find(".party-size-override-toggle").on("change", (e) => {
+      this._overridePartySize = e.currentTarget.checked;
+      game.settings.set(MODULE_ID, "overridePartySize", this._overridePartySize);
+      this.render(false);
+    });
+
+    // Manual party size input
+    html.find(".manual-party-size").on("change", (e) => {
+      const val = parseInt(e.currentTarget.value, 10);
+      if (!isNaN(val) && val >= 1) {
+        this._manualPartySize = val;
+        game.settings.set(MODULE_ID, "manualPartySize", val);
+        this.render(false);
+      }
+    });
+
+    // Elite / Weak adjustment toggles
+    html.find(".adjustment-btn").on("click", (e) => {
+      const entryId = e.currentTarget.closest("[data-entry-id]").dataset.entryId;
+      const adjustment = e.currentTarget.dataset.adjustment;
+      this._setAdjustment(entryId, adjustment);
+    });
+
+    // Remove entry button
+    html.find(".remove-entry-btn").on("click", (e) => {
+      const entryId = e.currentTarget.closest("[data-entry-id]").dataset.entryId;
+      this._removeEntry(entryId);
+    });
+
+    // Clear all creatures button
+    html.find(".clear-creatures-btn").on("click", () => {
+      this._entries = this._entries.filter((e) => e.isHazard);
+      this.render(false);
+    });
+
+    // Clear all hazards button
+    html.find(".clear-hazards-btn").on("click", () => {
+      this._entries = this._entries.filter((e) => !e.isHazard);
+      this.render(false);
+    });
+
+    // Hazards section expand/collapse
+    html.find(".hazards-toggle-btn").on("click", () => {
+      this._hazardsExpanded = !this._hazardsExpanded;
+      game.settings.set(MODULE_ID, "hazardsExpanded", this._hazardsExpanded);
+      this.render(false);
+    });
+
+    // Drop zone listeners (creatures and hazards share the same handler)
+    const dropZone = html.find(".encounter-drop-zone")[0];
+    if (dropZone) {
+      dropZone.addEventListener("dragover", this._onDragOver.bind(this));
+      dropZone.addEventListener("drop",     this._onDrop.bind(this));
+    }
+
+    const hazardDropZone = html.find(".hazard-drop-zone")[0];
+    if (hazardDropZone) {
+      hazardDropZone.addEventListener("dragover", this._onDragOver.bind(this));
+      hazardDropZone.addEventListener("drop",     this._onDrop.bind(this));
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Drag and drop
+  // ---------------------------------------------------------------------------
+
+  _onDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  }
+
+  async _onDrop(event) {
+    event.preventDefault();
+
+    let data;
+    try {
+      data = JSON.parse(event.dataTransfer.getData("text/plain"));
+    } catch {
+      return ui.notifications.warn("Encounter Builder: Could not read dropped data.");
+    }
+
+    // We only handle Actor drops
+    if (data.type !== "Actor") {
+      return ui.notifications.warn("Encounter Builder: Only actors (creatures and hazards) can be dropped here.");
+    }
+
+    // Resolve the actor — could be from a compendium or the world
+    let actor;
+    try {
+      if (data.uuid) {
+        actor = await fromUuid(data.uuid);
+      } else if (data.pack && data.id) {
+        const pack = game.packs.get(data.pack);
+        actor = await pack?.getDocument(data.id);
+      } else if (data.id) {
+        actor = game.actors.get(data.id);
+      }
+    } catch (err) {
+      console.error(`${MODULE_ID} | Error resolving dropped actor:`, err);
+    }
+
+    if (!actor) {
+      return ui.notifications.warn("Encounter Builder: Could not find that actor.");
+    }
+
+    // Get the level — prompt if missing
+    let level = getActorLevel(actor);
+    if (level === null) {
+      // Non-standard actor — ask the GM to set a level
+      level = await this._promptForLevel(actor.name);
+      if (level === null) return; // GM cancelled
+    }
+
+    const hazard  = isHazardActor(actor);
+    const complex = hazard ? isComplexHazard(actor) : false;
+
+    this._entries.push({
+      id:         uid(),
+      name:       actor.name,
+      baseLevel:  level,
+      adjustment: "none",
+      isHazard:   hazard,
+      isComplex:  complex,
+      actorUuid:  actor.uuid ?? null,
+    });
+
+    this.render(false);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Entry manipulation
+  // ---------------------------------------------------------------------------
+
+  _setAdjustment(entryId, adjustment) {
+    const entry = this._entries.find((e) => e.id === entryId);
+    if (!entry) return;
+
+    // Toggle: clicking the active button returns to "none"
+    entry.adjustment = entry.adjustment === adjustment ? "none" : adjustment;
+    this.render(false);
+  }
+
+  _removeEntry(entryId) {
+    this._entries = this._entries.filter((e) => e.id !== entryId);
+    this.render(false);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Party level resolution
+  // ---------------------------------------------------------------------------
+
+  _resolvePartyLevel(average, highest) {
+    switch (this._partyLevelMode) {
+      case "highest": return highest;
+      case "manual":  return this._manualPartyLevel;
+      default:        return average; // "average"
+    }
+  }
+
+  _setPartyLevelMode(mode) {
+    this._partyLevelMode = mode;
+    game.settings.set(MODULE_ID, "partyLevelMode", mode);
+    this.render(false);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Budget bar builder
+  // Produces data for the five-tier visual progress display.
+  // ---------------------------------------------------------------------------
+
+  _buildBudgetBars(totalXP, budgets) {
+    const maxXP = Math.max(budgets.extreme * 1.2, totalXP * 1.1, 10);
+
+    return [
+      { tier: "trivial",  label: "Trivial",  xp: budgets.trivial,  pct: (budgets.trivial  / maxXP) * 100, color: "#aaaaaa" },
+      { tier: "low",      label: "Low",      xp: budgets.low,      pct: (budgets.low      / maxXP) * 100, color: "#4caf50" },
+      { tier: "moderate", label: "Moderate", xp: budgets.moderate, pct: (budgets.moderate / maxXP) * 100, color: "#2196f3" },
+      { tier: "severe",   label: "Severe",   xp: budgets.severe,   pct: (budgets.severe   / maxXP) * 100, color: "#ff9800" },
+      { tier: "extreme",  label: "Extreme",  xp: budgets.extreme,  pct: (budgets.extreme  / maxXP) * 100, color: "#f44336" },
+      { tier: "current",  label: "Current",  xp: totalXP,          pct: (totalXP          / maxXP) * 100, color: "#ffffff" },
+    ];
+  }
+
+  // ---------------------------------------------------------------------------
+  // Prompt GM for a level when a dropped actor has no detectable level
+  // ---------------------------------------------------------------------------
+
+  async _promptForLevel(actorName) {
+    return new Promise((resolve) => {
+      new Dialog({
+        title: "Set Creature Level",
+        content: `
+          <p><strong>${actorName}</strong> doesn't have a detectable level.</p>
+          <p>Enter its level manually:</p>
+          <div style="margin: 8px 0;">
+            <input type="number" id="manual-level-input" min="-1" max="25" value="1"
+              style="width: 80px; text-align: center;" />
+          </div>
+        `,
+        buttons: {
+          confirm: {
+            label: "Add to Encounter",
+            callback: (html) => {
+              const val = parseInt(html.find("#manual-level-input").val(), 10);
+              resolve(isNaN(val) ? 1 : val);
+            },
+          },
+          cancel: {
+            label: "Cancel",
+            callback: () => resolve(null),
+          },
+        },
+        default: "confirm",
+      }).render(true);
+    });
+  }
+}

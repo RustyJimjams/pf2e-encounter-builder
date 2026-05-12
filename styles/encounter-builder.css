@@ -1,0 +1,556 @@
+/* encounter-builder.css */
+/* Styles for the PF2e Encounter Builder floating window.             */
+/* Designed to match Foundry's PF2e system aesthetic.                 */
+
+/* ---------------------------------------------------------------------------
+   Window shell
+--------------------------------------------------------------------------- */
+
+.pf2e-encounter-builder .window-content {
+  padding: 0;
+  overflow-y: auto;
+  background: var(--color-bg, #1a1a1a);
+  font-family: var(--font-primary, "Signika", sans-serif);
+  color: var(--color-text-primary, #f0e8d4);
+}
+
+.encounter-builder-app {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 8px;
+}
+
+/* ---------------------------------------------------------------------------
+   Sections
+--------------------------------------------------------------------------- */
+
+.eb-section {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.eb-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.eb-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-hyperlink, #c8a45e);
+  margin: 0 0 6px 0;
+  padding: 0;
+  border: none;
+}
+
+.eb-section-header .eb-section-title {
+  margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Rows and labels
+--------------------------------------------------------------------------- */
+
+.eb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.eb-row:last-child {
+  margin-bottom: 0;
+}
+
+.eb-label {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #b0a090);
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Party level mode buttons
+--------------------------------------------------------------------------- */
+
+.party-level-modes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.party-level-mode-btn {
+  padding: 3px 10px;
+  font-size: 0.78rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-primary, #f0e8d4);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  line-height: 1.6;
+}
+
+.party-level-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.party-level-mode-btn.active {
+  background: rgba(200, 164, 94, 0.25);
+  border-color: var(--color-text-hyperlink, #c8a45e);
+  color: var(--color-text-hyperlink, #c8a45e);
+  font-weight: 600;
+}
+
+.level-value {
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.manual-party-level,
+.manual-party-size {
+  width: 52px;
+  text-align: center;
+  padding: 2px 4px;
+  font-size: 0.85rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  color: var(--color-text-primary, #f0e8d4);
+}
+
+/* ---------------------------------------------------------------------------
+   Active level display
+--------------------------------------------------------------------------- */
+
+.active-level-row {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #b0a090);
+}
+
+.active-level-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-text-hyperlink, #c8a45e);
+}
+
+/* ---------------------------------------------------------------------------
+   Party size
+--------------------------------------------------------------------------- */
+
+.party-size-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detected-size {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary, #b0a090);
+}
+
+.override-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.party-size-override-toggle {
+  cursor: pointer;
+}
+
+.active-size-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(200, 164, 94, 0.15);
+  border: 1px solid rgba(200, 164, 94, 0.3);
+  border-radius: 10px;
+  padding: 1px 8px;
+  color: var(--color-text-hyperlink, #c8a45e);
+}
+
+/* ---------------------------------------------------------------------------
+   XP Budget section
+--------------------------------------------------------------------------- */
+
+.budget-section .eb-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.difficulty-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: #fff;
+  background: #888;
+  transition: background-color 0.3s;
+}
+
+.total-xp {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #f0e8d4);
+  margin-left: auto;
+}
+
+/* Budget table */
+
+.budget-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  margin-bottom: 10px;
+}
+
+.budget-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary, #b0a090);
+  padding: 2px 4px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.budget-table th.bar-col {
+  width: 40%;
+}
+
+.budget-row td {
+  padding: 3px 4px;
+  vertical-align: middle;
+}
+
+.tier-label {
+  font-weight: 600;
+  min-width: 72px;
+}
+
+.tier-xp {
+  min-width: 56px;
+  color: var(--color-text-secondary, #b0a090);
+}
+
+/* Mini bar inside table */
+
+.budget-bar-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.budget-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.25s ease;
+  opacity: 0.7;
+}
+
+/* Current XP progress bar */
+
+.current-xp-bar-wrap {
+  margin-top: 4px;
+}
+
+.current-xp-track {
+  position: relative;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: visible;
+}
+
+.current-xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #c8a45e, #f44336);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  max-width: 100%;
+}
+
+.tier-marker {
+  position: absolute;
+  top: -3px;
+  height: 20px;
+  width: 0;
+  border-left: 2px dashed;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.current-xp-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  color: var(--color-text-secondary, #b0a090);
+  margin-top: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Entry lists (creatures and hazards share these styles)
+--------------------------------------------------------------------------- */
+
+.entry-list {
+  list-style: none;
+  margin: 0 0 6px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.entry-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  font-size: 0.78rem;
+  transition: background 0.15s;
+}
+
+.entry-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.entry-row.out-of-range {
+  border-color: rgba(255, 152, 0, 0.4);
+  background: rgba(255, 152, 0, 0.06);
+}
+
+.entry-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.entry-level {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #b0a090);
+  min-width: 48px;
+  text-align: center;
+}
+
+.adjustment-tag {
+  font-style: italic;
+  font-size: 0.7rem;
+}
+
+.hazard-type-tag {
+  font-size: 0.68rem;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(100, 100, 200, 0.2);
+  border: 1px solid rgba(100, 100, 200, 0.3);
+  color: #aab0f0;
+  flex-shrink: 0;
+}
+
+.entry-xp {
+  font-size: 0.78rem;
+  font-weight: 600;
+  min-width: 48px;
+  text-align: right;
+  color: var(--color-text-hyperlink, #c8a45e);
+}
+
+.entry-xp.warn {
+  color: #ff9800;
+}
+
+/* ---------------------------------------------------------------------------
+   Elite / Weak adjustment buttons
+--------------------------------------------------------------------------- */
+
+.adjustment-btns {
+  display: flex;
+  gap: 2px;
+}
+
+.adjustment-btn {
+  width: 20px;
+  height: 20px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text-secondary, #b0a090);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.adjustment-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.adjustment-btn[data-adjustment="elite"].active {
+  background: rgba(76, 175, 80, 0.25);
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.adjustment-btn[data-adjustment="weak"].active {
+  background: rgba(244, 67, 54, 0.25);
+  border-color: #f44336;
+  color: #f44336;
+}
+
+/* ---------------------------------------------------------------------------
+   Remove button
+--------------------------------------------------------------------------- */
+
+.remove-entry-btn {
+  width: 18px;
+  height: 18px;
+  font-size: 0.65rem;
+  border: none;
+  border-radius: 2px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+
+.remove-entry-btn:hover {
+  color: #f44336;
+  background: rgba(244, 67, 54, 0.15);
+}
+
+/* ---------------------------------------------------------------------------
+   Drop zones
+--------------------------------------------------------------------------- */
+
+.encounter-drop-zone,
+.hazard-drop-zone {
+  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 16px;
+  text-align: center;
+  color: var(--color-text-secondary, #b0a090);
+  font-size: 0.78rem;
+  transition: border-color 0.2s, background 0.2s;
+  cursor: default;
+}
+
+.encounter-drop-zone.compact,
+.hazard-drop-zone.compact {
+  padding: 6px;
+  font-size: 0.72rem;
+}
+
+.encounter-drop-zone:hover,
+.hazard-drop-zone:hover,
+.encounter-drop-zone.dragover,
+.hazard-drop-zone.dragover {
+  border-color: var(--color-text-hyperlink, #c8a45e);
+  background: rgba(200, 164, 94, 0.06);
+  color: var(--color-text-hyperlink, #c8a45e);
+}
+
+.drop-hint {
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Hazards section collapse
+--------------------------------------------------------------------------- */
+
+.eb-collapse-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: inherit;
+}
+
+.eb-collapse-btn:hover .eb-section-title {
+  color: #e0c07e;
+}
+
+.collapse-icon {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #b0a090);
+}
+
+.hazard-count {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #b0a090);
+  font-weight: normal;
+}
+
+/* ---------------------------------------------------------------------------
+   Small utility buttons (Clear, etc.)
+--------------------------------------------------------------------------- */
+
+.eb-small-btn {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-text-secondary, #b0a090);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.eb-small-btn:hover {
+  background: rgba(244, 67, 54, 0.15);
+  border-color: rgba(244, 67, 54, 0.4);
+  color: #f44336;
+}
+
+/* ---------------------------------------------------------------------------
+   Scrollbar styling (webkit)
+--------------------------------------------------------------------------- */
+
+.pf2e-encounter-builder .window-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.pf2e-encounter-builder .window-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pf2e-encounter-builder .window-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.pf2e-encounter-builder .window-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
