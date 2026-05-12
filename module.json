@@ -1,11 +1,16 @@
 {
-  "id": "pf2e-encounter-builder",
-  "title": "PF2e Encounter Builder",
-  "description": "A GM tool for planning PF2e encounters.",
-  "version": "0.1.0",
-  "authors": [{ "name": "Your Name Here" }],
-  "compatibility": {
-    "minimum": "14",
-    "verified": "14"
-  }
+    "id": "pf2e-encounter-builder",
+    "title": "PF2e Encounter Builder",
+    "description": "A GM tool for planning and balancing Pathfinder 2e encounters using the XP budget system.",
+    "version": "0.1.0",
+    "authors": [{"name": "Rusty Jimjams"}],
+    "compatibility": {
+        "minimum": "13",
+        "verified": "14"
+    },
+    "esmodules": ["scripts/main.js"],
+    "styles": ["styles/encounter-builder.css"],
+    "languages": [{"lang": "en", "name": "English", "path": "lang/en.json"}],
+    "manifest": "https://raw.githubusercontent.com/[RustyJimjams]/pf2e-encounter-builder/main/module.json",
+    "download": "https://github.com/[RustyJimjams]/pf2e-encounter-builder/archive/refs/heads/main.zip"
 }
