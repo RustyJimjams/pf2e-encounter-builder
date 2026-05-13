@@ -162,4 +162,12 @@ Hooks.once("ready", () => {
   };
 
   game.modules.get(MODULE_ID).api = api;
+
+  // Fallback: direct DOM click listener on the toolbar button
+  setTimeout(() => {
+    const btn = document.querySelector('[data-tool="encounter-builder"]');
+    if (btn) {
+      btn.addEventListener("click", () => toggleBuilder());
+    }
+  }, 1000);
 });

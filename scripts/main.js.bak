@@ -126,12 +126,13 @@ Hooks.on("getSceneControlButtons", (controls) => {
   controls.tokens = controls.tokens ?? {};
   controls.tokens.tools = controls.tokens.tools ?? {};
 
-  controls.tokens.tools["encounter-builder"] = {
+controls.tokens.tools["encounter-builder"] = {
   name: "encounter-builder",
   title: "Encounter Builder",
   icon: "fa-solid fa-dice-d20",
   button: true,
   visible: true,
+  onClick: () => toggleBuilder(),
   onChange: () => toggleBuilder(),
   order: 100,
 };
