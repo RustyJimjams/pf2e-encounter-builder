@@ -1,77 +1,55 @@
-# PF2e Encounter Builder — Project Log
+# PF2e Encounter Builder
 
-## Overview
+A GM tool for planning and balancing Pathfinder 2e encounters from within Foundry VTT. No external apps, no import/export — everything lives where you already work.
 
-A GM-facing Foundry VTT module for planning and balancing Pathfinder 2e encounters using the official XP budget system. Built natively as a Foundry module so it lives where the GM already works, with no import/export step required.
+## Features
 
----
+### Encounter Planning
+- **Auto-detects party data** — reads all active player-owned characters and calculates party level and size automatically
+- **Flexible party level** — choose between average level, highest level, or a manual override; all three values are shown simultaneously
+- **Party size override** — manually adjust for absent players or cohorts
+- **Live XP budget** — all five difficulty tiers (Trivial / Low / Moderate / Severe / Extreme) shown at once, automatically adjusted for party size
+- **Live difficulty rating** — color-coded badge and progress bar update in real time as you build
+- **Drag and drop** — drop actors from any compendium directly into the builder, including homebrew
+- **Elite / Weak toggles** — per-creature buttons shift effective level ±1 and instantly recalculate XP
+- **Hazards** — collapsible section with automatic Simple vs Complex detection; applies the +4 level bonus to Complex hazards per the rules
 
-## V1 — Completed
+### Scene & Combat Tools
+- **Create Encounter Scene** — creates a blank scene, imports fresh actor copies, and places tokens in a cluster ready for a map
+- **Add to Combat Tracker** — pushes actors directly into initiative without creating a scene; ideal for theatre of the mind. Detects an active combat and asks whether to clear and replace or add to the existing tracker
 
-### What It Does
-- **Auto-detects party data** — reads all active player-owned characters from the world, calculates average level, highest level, and detected party size automatically
-- **Party level flexibility** — GM can choose between average level, highest level, or a manual override; all three values are shown simultaneously so the GM can make an informed choice
-- **Party size override** — detected size is used by default, with an optional manual override for absent players or cohorts
-- **XP budget display** — all five difficulty tiers (Trivial/Low/Moderate/Severe/Extreme) are shown at once with their XP thresholds, automatically adjusted for party size
-- **Live difficulty rating** — a color-coded badge and progress bar update in real time as creatures are added
-- **Drag and drop** — accepts actor drops from any compendium, including homebrew; reads level automatically from PF2e actor data, prompts GM to set manually if not found
-- **Elite/Weak toggles** — per-creature buttons shift effective level ±1 and instantly recalculate XP cost
-- **Hazards section** — collapsible, detects Simple vs Complex automatically, applies the +4 level bonus to Complex hazards per the rules
-- **Floating window** — GM-only, resizable, draggable, remembers position between sessions
-- **Persistent settings** — party level mode and party size override persist between sessions via Foundry's settings API
+### Interface
+- Floating window — GM-only, resizable, draggable, remembers position between sessions
+- Opens from the token controls toolbar
 
-### File Structure
+## Installation
+
+Install via manifest URL in Foundry's Add-on Module installer:
+
 ```
-pf2e-encounter-builder/
-├── module.json
-├── lang/
-│   └── en.json
-├── scripts/
-│   ├── main.js
-│   ├── xp-calculator.js
-│   └── encounter-builder.js
-├── templates/
-│   └── encounter-builder.hbs
-└── styles/
-    └── encounter-builder.css
+https://raw.githubusercontent.com/RustyJimjams/pf2e-encounter-builder/main/module.json
 ```
 
-### Technical Notes
-- Built targeting Foundry v14, PF2e system v6+
-- Uses Foundry's `Application` class (v1 framework — see Known Issues)
-- XP math is fully isolated in `xp-calculator.js` with no Foundry dependencies
-- Module hosted on GitHub for installation via manifest URL
+## Requirements
 
-### Known Issues / Deprecation Warnings
-- **`Application` vs `ApplicationV2`** — the window class uses Foundry's v1 Application framework, which is deprecated as of v13 and will be removed in v16. Flagged for v2 upgrade.
-- **`onClick` vs `onChange`** — the toolbar button uses the deprecated `onClick` handler. Flagged for v2 upgrade.
-- Both are warnings only — nothing breaks in v14.
+- Foundry VTT v13+
+- Pathfinder 2e system v6.0.0+
 
----
+## Compatibility
 
-## V2 — Planned
+- Verified on Foundry v14 (Build 361) with PF2e system v8.1.2
 
-### Push to Scene
-The headline v2 feature. A **"Create Scene"** button at the bottom of the builder will:
+## Known Issues
 
-1. Prompt the GM for a scene name
-2. Create a blank Foundry scene with sensible defaults
-3. Import fresh actor copies from their compendium UUIDs into the world
-4. Place tokens in a spiral cluster at the center of the scene so nothing overlaps
-5. Activate the new scene automatically
-6. Ask the GM whether to close the builder or keep it open (to allow building multiple scenes in one session)
+- The `Application` window class is deprecated as of Foundry v13 and will be removed in v16. Migration to `ApplicationV2` is planned.
+- Token placement on created scenes is approximate — tokens are clustered near center but may not be pixel-perfect on the grid.
 
-**Design decisions:**
-- Tokens placed in a spiral pattern outward from scene center, spaced to avoid overlap
-- Always creates fresh actor copies regardless of whether the actor already exists in the world
-- Scene naming is always prompted — no auto-generated names
+## Changelog
 
-### Framework Upgrades
-- Migrate from `Application` to `ApplicationV2` for Foundry v14/v15 forward compatibility
-- Replace deprecated `onClick` toolbar handler with `onChange`
+### 0.2.0
+- Added **Create Encounter Scene** — blank scene with spiral token placement
+- Added **Add to Combat Tracker** — theatre of the mind support with active combat detection and immediate initiative prompts
 
-### Future Considerations (Post-V2)
-- Save and load named encounters
-- Send creatures directly to the Combat Tracker without creating a scene
-- Search and filter within the builder rather than hunting through compendiums
-- Reorder encounter entries by drag-and-drop within the list
+### 0.1.0
+- Initial release
+- Party detection, XP budget display, drag-and-drop creatures and hazards, Elite/Weak toggles
