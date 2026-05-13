@@ -2,7 +2,7 @@
     "id": "pf2e-encounter-builder",
     "title": "PF2e Encounter Builder",
     "description": "A GM tool for planning and balancing Pathfinder 2e encounters using the XP budget system.",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "authors": [{"name": "Rusty Jimjams"}],
     "compatibility": {
         "minimum": "13",
