@@ -17,6 +17,7 @@ A GM tool for planning and balancing Pathfinder 2e encounters from within Foundr
 ### Scene & Combat Tools
 - **Create Encounter Scene** — creates a blank scene, imports fresh actor copies, and places tokens in a cluster ready for a map
 - **Add to Combat Tracker** — pushes actors directly into initiative without creating a scene; ideal for theatre of the mind. Detects an active combat and asks whether to clear and replace or add to the existing tracker
+- **Push to Scene** — select any existing scene from a dropdown and push tokens directly onto it in a spiral cluster. Ideal for when you've already set up a map and just need to populate it.
 
 ### Interface
 - Floating window — GM-only, resizable, draggable, remembers position between sessions
@@ -45,6 +46,9 @@ https://raw.githubusercontent.com/RustyJimjams/pf2e-encounter-builder/main/modul
 - Token placement on created scenes is approximate — tokens are clustered near center but may not be pixel-perfect on the grid.
 
 ## Changelog
+
+### 0.3.0
+- Added Push to Scene — select an existing scene from a list and push encounter tokens onto it without creating a new scene
 
 ### 0.2.0
 - Added **Create Encounter Scene** — blank scene with spiral token placement
