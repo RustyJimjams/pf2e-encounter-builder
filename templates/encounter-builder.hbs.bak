@@ -276,15 +276,6 @@
       <i class="fa-solid fa-map"></i>
       Create Encounter Scene
     </button>
-  </div>
-  {{/if}}
-  
-  {{#if hasEntries}}
-  <div class="eb-create-scene-wrap">
-    <button class="create-scene-btn">
-      <i class="fa-solid fa-map"></i>
-      Create Encounter Scene
-    </button>
     <button class="add-to-tracker-btn">
       <i class="fa-solid fa-swords"></i>
       Add to Combat Tracker

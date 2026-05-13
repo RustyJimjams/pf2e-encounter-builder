@@ -580,12 +580,6 @@
    Create Scene button
 --------------------------------------------------------------------------- */
 
-.eb-create-scene-wrap {
-  padding: 4px 0 6px 0;
-  display: flex;
-  justify-content: center;
-}
-
 .create-scene-btn {
   width: 100%;
   padding: 8px 16px;

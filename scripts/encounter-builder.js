@@ -273,6 +273,11 @@ export class EncounterBuilder extends Application {
 	this._onAddToTracker();
 	});
 
+// Push to Scene button (v2)
+html.find(".push-to-scene-btn").on("click", () => {
+  this._onPushToScene();
+});
+
     const dropZone = html.find(".encounter-drop-zone")[0];
     if (dropZone) {
       dropZone.addEventListener("dragover", this._onDragOver.bind(this));
@@ -552,6 +557,131 @@ async _promptReplaceOrAppend() {
         },
       },
       default: "append",
+    }).render(true);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Push to Scene (v2)
+// ---------------------------------------------------------------------------
+
+async _onPushToScene() {
+  if (this._entries.length === 0) {
+    return ui.notifications.warn("Encounter Builder: Add some creatures or hazards before pushing to a scene.");
+  }
+
+  // Step 1 — Prompt GM to pick a scene
+  const sceneId = await this._promptPickScene();
+  if (!sceneId) return;
+
+  const scene = game.scenes.get(sceneId);
+  if (!scene) {
+    return ui.notifications.warn("Encounter Builder: Could not find that scene.");
+  }
+
+  ui.notifications.info("Encounter Builder: Pushing tokens to scene...");
+
+  try {
+    // Step 2 — Calculate spiral positions around scene center
+    const gridSize  = scene.grid.size ?? 100;
+    const cx = Math.floor(scene.width  / 2 / gridSize) * gridSize;
+    const cy = Math.floor(scene.height / 2 / gridSize) * gridSize;
+    const positions = spiralPositions(this._entries.length, cx, cy, gridSize);
+
+    // Step 3 — Import actors and build token data
+    const tokenDatas = [];
+
+    for (let i = 0; i < this._entries.length; i++) {
+      const entry = this._entries[i];
+      const pos   = positions[i];
+
+      let worldActor = null;
+
+      if (entry.actorUuid) {
+        try {
+          const sourceActor = await fromUuid(entry.actorUuid);
+          if (sourceActor?.compendium) {
+            worldActor = await game.actors.importFromCompendium(
+              sourceActor.compendium,
+              sourceActor.id,
+              {},
+              { keepId: false }
+            );
+          }
+        } catch (err) {
+          console.warn(`${MODULE_ID} | Could not import ${entry.name}:`, err);
+        }
+      }
+
+      if (!worldActor) {
+        const [fallback] = await Actor.createDocuments([{
+          name: entry.name,
+          type: entry.isHazard ? "hazard" : "npc",
+        }]);
+        worldActor = fallback;
+      }
+
+      const tokenDoc = await worldActor.getTokenDocument({
+        x: pos.x,
+        y: pos.y,
+        hidden: false,
+      });
+
+      tokenDatas.push(tokenDoc.toObject());
+    }
+
+    // Step 4 — Place all tokens in one batch
+    await scene.createEmbeddedDocuments("Token", tokenDatas);
+
+    ui.notifications.info(`Encounter Builder: ${this._entries.length} token(s) pushed to "${scene.name}".`);
+
+    // Step 5 — Ask GM whether to keep the builder open
+    const keepOpen = await this._promptKeepOpen();
+    if (!keepOpen) this.close();
+
+  } catch (err) {
+    console.error(`${MODULE_ID} | Error pushing to scene:`, err);
+    ui.notifications.error("Encounter Builder: Something went wrong. Check the console for details.");
+  }
+}
+
+async _promptPickScene() {
+  return new Promise((resolve) => {
+    // Build scene options from all existing scenes
+    const scenes = game.scenes.contents;
+    if (scenes.length === 0) {
+      ui.notifications.warn("Encounter Builder: No scenes found in this world.");
+      resolve(null);
+      return;
+    }
+
+    const options = scenes
+      .map((s) => `<option value="${s.id}">${s.name}</option>`)
+      .join("");
+
+    new Dialog({
+      title: "Push to Scene",
+      content: `
+        <p>Select a scene to push tokens to:</p>
+        <div style="margin: 8px 0;">
+          <select id="scene-pick-select" style="width: 100%;">
+            ${options}
+          </select>
+        </div>
+      `,
+      buttons: {
+        confirm: {
+          label: "Push Tokens",
+          callback: (html) => {
+            resolve(html.find("#scene-pick-select").val());
+          },
+        },
+        cancel: {
+          label: "Cancel",
+          callback: () => resolve(null),
+        },
+      },
+      default: "confirm",
     }).render(true);
   });
 }

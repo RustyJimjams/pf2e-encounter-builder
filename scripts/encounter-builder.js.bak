@@ -267,6 +267,16 @@ export class EncounterBuilder extends Application {
     html.find(".create-scene-btn").on("click", () => {
       this._onCreateScene();
     });
+	
+	// Add to Combat Tracker button (v2)
+	html.find(".add-to-tracker-btn").on("click", () => {
+	this._onAddToTracker();
+	});
+
+// Push to Scene button (v2)
+html.find(".push-to-scene-btn").on("click", () => {
+  this._onPushToScene();
+});
 
     const dropZone = html.find(".encounter-drop-zone")[0];
     if (dropZone) {
@@ -444,6 +454,112 @@ export class EncounterBuilder extends Application {
       ui.notifications.error("Encounter Builder: Something went wrong creating the scene. Check the console for details.");
     }
   }
+
+// ---------------------------------------------------------------------------
+// Add to Combat Tracker (v2)
+// ---------------------------------------------------------------------------
+
+async _onAddToTracker() {
+  if (this._entries.length === 0) {
+    return ui.notifications.warn("Encounter Builder: Add some creatures or hazards first.");
+  }
+
+  try {
+    let combat = game.combat;
+
+    // Step 1 — Handle existing combat
+    if (combat) {
+      const replace = await this._promptReplaceOrAppend();
+      if (replace === null) return; // GM cancelled
+
+      if (replace) {
+        // Clear existing combatants
+        await combat.deleteEmbeddedDocuments(
+          "Combatant",
+          combat.combatants.map((c) => c.id)
+        );
+      }
+    } else {
+      // Step 2 — No active combat, create one
+      combat = await Combat.create({ scene: null });
+      await combat.activate();
+    }
+
+    // Step 3 — Import fresh actor copies and add as combatants
+    const combatantDatas = [];
+
+    for (const entry of this._entries) {
+      let worldActor = null;
+
+      if (entry.actorUuid) {
+        try {
+          const sourceActor = await fromUuid(entry.actorUuid);
+          if (sourceActor?.compendium) {
+            worldActor = await game.actors.importFromCompendium(
+              sourceActor.compendium,
+              sourceActor.id,
+              {},
+              { keepId: false }
+            );
+          }
+        } catch (err) {
+          console.warn(`${MODULE_ID} | Could not import ${entry.name}:`, err);
+        }
+      }
+
+      // Fallback: minimal world actor
+      if (!worldActor) {
+        const [fallback] = await Actor.createDocuments([{
+          name: entry.name,
+          type: entry.isHazard ? "hazard" : "npc",
+        }]);
+        worldActor = fallback;
+      }
+
+      combatantDatas.push({ actorId: worldActor.id, hidden: false });
+    }
+
+    // Step 4 — Add all combatants in one batch
+    await combat.createEmbeddedDocuments("Combatant", combatantDatas);
+
+    // Step 5 — Roll initiative for all combatants
+    await combat.rollAll();
+
+    ui.notifications.info(`Encounter Builder: ${this._entries.length} combatant(s) added to the Combat Tracker.`);
+
+    // Step 6 — Ask GM whether to keep the builder open
+    const keepOpen = await this._promptKeepOpen();
+    if (!keepOpen) this.close();
+
+  } catch (err) {
+    console.error(`${MODULE_ID} | Error adding to Combat Tracker:`, err);
+    ui.notifications.error("Encounter Builder: Something went wrong. Check the console for details.");
+  }
+}
+
+async _promptReplaceOrAppend() {
+  return new Promise((resolve) => {
+    new Dialog({
+      title: "Active Combat Detected",
+      content: `<p>There is already an active combat. What would you like to do?</p>`,
+      buttons: {
+        replace: {
+          label: "Clear and Replace",
+          callback: () => resolve(true),
+        },
+        append: {
+          label: "Add to Existing",
+          callback: () => resolve(false),
+        },
+        cancel: {
+          label: "Cancel",
+          callback: () => resolve(null),
+        },
+      },
+      default: "append",
+    }).render(true);
+  });
+}
 
   // ---------------------------------------------------------------------------
   // Entry manipulation
