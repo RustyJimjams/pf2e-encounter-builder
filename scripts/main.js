@@ -3,6 +3,11 @@
  * Entry point for the PF2e Encounter Builder module.
  * Registers Foundry hooks, adds the toolbar button, and manages the
  * singleton window instance.
+ *
+ * Migration notes (Application → ApplicationV2):
+ *  - builder.rendered is still valid on ApplicationV2
+ *  - getSceneControlButtons signature changed in v13: receives a Map-like
+ *    controls object; check your Foundry version if the button doesn't appear
  */
 
 import { EncounterBuilder } from "./encounter-builder.js";
@@ -35,7 +40,6 @@ function getBuilder() {
  */
 function toggleBuilder() {
   const builder = getBuilder();
-
   if (builder.rendered) {
     builder.close();
   } else {
@@ -51,12 +55,11 @@ function toggleBuilder() {
 Hooks.once("init", () => {
   console.log(`${MODULE_ID} | Initializing PF2e Encounter Builder`);
 
-  // Party level mode preference (persists across sessions)
   game.settings.register(MODULE_ID, "partyLevelMode", {
     name: "Party Level Mode",
     hint: "Which party level calculation to use by default.",
     scope: "client",
-    config: false, // managed in-window, not in the settings menu
+    config: false,
     type: String,
     choices: {
       average: "Average Level",
@@ -66,7 +69,6 @@ Hooks.once("init", () => {
     default: "average",
   });
 
-  // Manual party level override value
   game.settings.register(MODULE_ID, "manualPartyLevel", {
     name: "Manual Party Level",
     scope: "client",
@@ -75,7 +77,6 @@ Hooks.once("init", () => {
     default: 1,
   });
 
-  // Manual party size override value
   game.settings.register(MODULE_ID, "manualPartySize", {
     name: "Manual Party Size",
     scope: "client",
@@ -84,7 +85,6 @@ Hooks.once("init", () => {
     default: 4,
   });
 
-  // Whether to use the manual party size override
   game.settings.register(MODULE_ID, "overridePartySize", {
     name: "Override Party Size",
     scope: "client",
@@ -93,7 +93,6 @@ Hooks.once("init", () => {
     default: false,
   });
 
-  // Whether the hazards section is expanded
   game.settings.register(MODULE_ID, "hazardsExpanded", {
     name: "Hazards Section Expanded",
     scope: "client",
@@ -105,69 +104,65 @@ Hooks.once("init", () => {
 
 // ---------------------------------------------------------------------------
 // Hook: ready
-// Everything is loaded — add the toolbar button and set up drop listeners.
 // ---------------------------------------------------------------------------
 
 Hooks.once("ready", () => {
-  // Only show the tool to GMs
   if (!game.user.isGM) return;
-
   console.log(`${MODULE_ID} | Ready`);
+
+  // Expose module API for debugging and inter-module use
+  const api = {
+    openBuilder:  () => getBuilder().render(true),
+    closeBuilder: () => getBuilder().close(),
+    getBuilder,
+  };
+  game.modules.get(MODULE_ID).api = api;
+
+  // Fallback click listener in case the toolbar hook doesn't fire
+  setTimeout(() => {
+    const btn = document.querySelector('[data-tool="encounter-builder"]');
+    if (btn) btn.addEventListener("click", () => toggleBuilder());
+  }, 1000);
 });
 
 // ---------------------------------------------------------------------------
 // Hook: getSceneControlButtons
-// Adds our button to Foundry's left toolbar (Token Controls group).
+// Foundry v13 changed the controls argument from a plain array to an object
+// keyed by group name. Both shapes are handled below.
 // ---------------------------------------------------------------------------
 
 Hooks.on("getSceneControlButtons", (controls) => {
   if (!game.user.isGM) return;
 
-  controls.tokens = controls.tokens ?? {};
-  controls.tokens.tools = controls.tokens.tools ?? {};
+  // v13+: controls is a plain object — controls.tokens is the token group
+  if (controls && typeof controls === "object" && !Array.isArray(controls)) {
+    controls.tokens ??= {};
+    controls.tokens.tools ??= {};
+    controls.tokens.tools["encounter-builder"] = {
+      name:     "encounter-builder",
+      title:    "Encounter Builder",
+      icon:     "fa-solid fa-dice-d20",
+      button:   true,
+      visible:  true,
+      onClick:  () => toggleBuilder(),
+      onChange: () => toggleBuilder(),
+      order:    100,
+    };
+    return;
+  }
 
-controls.tokens.tools["encounter-builder"] = {
-  name: "encounter-builder",
-  title: "Encounter Builder",
-  icon: "fa-solid fa-dice-d20",
-  button: true,
-  visible: true,
-  onClick: () => toggleBuilder(),
-  onChange: () => toggleBuilder(),
-  order: 100,
-};
-});
-
-// ---------------------------------------------------------------------------
-// Hook: renderActorDirectory
-// Not strictly needed for v1, but sets up a future hook point for
-// dragging directly from the Actor sidebar tab.
-// ---------------------------------------------------------------------------
-
-// (Placeholder — drag-and-drop from compendiums is handled inside
-// EncounterBuilder._onDrop, which intercepts Foundry's native drop events.)
-
-// ---------------------------------------------------------------------------
-// Expose module API on game.modules for debugging and potential
-// inter-module compatibility down the road.
-// ---------------------------------------------------------------------------
-
-Hooks.once("ready", () => {
-  if (!game.user.isGM) return;
-
-  const api = {
-    openBuilder: () => getBuilder().render(true),
-    closeBuilder: () => getBuilder().close(),
-    getBuilder,
-  };
-
-  game.modules.get(MODULE_ID).api = api;
-
-  // Fallback: direct DOM click listener on the toolbar button
-  setTimeout(() => {
-    const btn = document.querySelector('[data-tool="encounter-builder"]');
-    if (btn) {
-      btn.addEventListener("click", () => toggleBuilder());
-    }
-  }, 1000);
+  // Older fallback: controls is an array of control groups
+  if (Array.isArray(controls)) {
+    const tokenControls = controls.find((c) => c.name === "token");
+    if (!tokenControls) return;
+    tokenControls.tools ??= [];
+    tokenControls.tools.push({
+      name:    "encounter-builder",
+      title:   "Encounter Builder",
+      icon:    "fa-solid fa-dice-d20",
+      button:  true,
+      visible: true,
+      onClick: () => toggleBuilder(),
+    });
+  }
 });

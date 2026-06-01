@@ -1,8 +1,14 @@
 /**
  * encounter-builder.js
- * The main Application class for the PF2e Encounter Builder.
- * Handles the floating window, party data reading, drag-and-drop,
- * and wires everything to xp-calculator.js.
+ * The main ApplicationV2 class for the PF2e Encounter Builder.
+ * Migrated from Application (v1) → ApplicationV2 + HandlebarsApplicationMixin (v13+).
+ *
+ * Key changes from the old Application base:
+ *  - static DEFAULT_OPTIONS replaces static defaultOptions + mergeObject
+ *  - PARTS declares named Handlebars partials; _renderHTML / _replaceHTML handle rendering
+ *  - _onRender(context, options) replaces activateListeners(html) — no jQuery
+ *  - this.element is the root HTMLElement, not a jQuery wrapper
+ *  - Drag-and-drop wired via _setupDragDrop / DragDrop helper
  */
 
 import { MODULE_ID } from "./main.js";
@@ -43,7 +49,6 @@ function getActorLevel(actor) {
 
 /**
  * Determines if a dropped actor is a hazard.
- * PF2e hazard actors have type "hazard".
  * @param {Actor} actor
  * @returns {boolean}
  */
@@ -53,7 +58,6 @@ function isHazardActor(actor) {
 
 /**
  * Determines if a hazard actor is complex.
- * Complex hazards have their own initiative — stored in system.details.isComplex.
  * @param {Actor} actor
  * @returns {boolean}
  */
@@ -71,15 +75,14 @@ function uid() {
 
 // ---------------------------------------------------------------------------
 // Spiral placement helper
-// Generates token positions in a spiral pattern around a center point.
 // ---------------------------------------------------------------------------
 
 /**
  * Returns an array of {x, y} positions in a spiral around a center point.
- * @param {number} count     - Number of positions needed
- * @param {number} cx        - Center X in pixels
- * @param {number} cy        - Center Y in pixels
- * @param {number} gridSize  - Size of one grid square in pixels
+ * @param {number} count    - Number of positions needed
+ * @param {number} cx       - Center X in pixels
+ * @param {number} cy       - Center Y in pixels
+ * @param {number} gridSize - Size of one grid square in pixels
  * @returns {Array<{x: number, y: number}>}
  */
 function spiralPositions(count, cx, cy, gridSize) {
@@ -94,10 +97,7 @@ function spiralPositions(count, cx, cy, gridSize) {
   while (positions.length < count) {
     x += dx;
     y += dy;
-    positions.push({
-      x: cx + x * gridSize,
-      y: cy + y * gridSize,
-    });
+    positions.push({ x: cx + x * gridSize, y: cy + y * gridSize });
 
     stepCount++;
     if (stepCount === steps) {
@@ -112,61 +112,63 @@ function spiralPositions(count, cx, cy, gridSize) {
 }
 
 // ---------------------------------------------------------------------------
-// EncounterBuilder Application class
+// EncounterBuilder — ApplicationV2 + HandlebarsApplicationMixin
 // ---------------------------------------------------------------------------
 
-export class EncounterBuilder extends Application {
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+
+export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) {
 
   constructor(options = {}) {
     super(options);
 
-    this._entries = [];
-    this._partyLevelMode = game.settings.get(MODULE_ID, "partyLevelMode");
+    this._entries          = [];
+    this._partyLevelMode   = game.settings.get(MODULE_ID, "partyLevelMode");
     this._manualPartyLevel = game.settings.get(MODULE_ID, "manualPartyLevel");
-    this._manualPartySize = game.settings.get(MODULE_ID, "manualPartySize");
+    this._manualPartySize  = game.settings.get(MODULE_ID, "manualPartySize");
     this._overridePartySize = game.settings.get(MODULE_ID, "overridePartySize");
-    this._hazardsExpanded = game.settings.get(MODULE_ID, "hazardsExpanded");
+    this._hazardsExpanded  = game.settings.get(MODULE_ID, "hazardsExpanded");
   }
 
   // ---------------------------------------------------------------------------
-  // Foundry Application config
+  // ApplicationV2 configuration
   // ---------------------------------------------------------------------------
 
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "pf2e-encounter-builder",
+  static DEFAULT_OPTIONS = {
+    id: "pf2e-encounter-builder",
+    window: {
       title: "Encounter Builder",
-      template: "modules/pf2e-encounter-builder/templates/encounter-builder.hbs",
+      resizable: true,
+    },
+    position: {
       width: 520,
       height: 680,
-      minWidth: 420,
-      minHeight: 480,
-      resizable: true,
-      classes: ["pf2e-encounter-builder"],
-    });
-  }
+    },
+    classes: ["pf2e-encounter-builder"],
+  };
+
+  static PARTS = {
+    main: {
+      template: "modules/pf2e-encounter-builder/templates/encounter-builder.hbs",
+    },
+  };
 
   // ---------------------------------------------------------------------------
-  // Data — passed to the Handlebars template on every render
+  // Context — passed to the Handlebars template on every render
   // ---------------------------------------------------------------------------
 
-  async getData() {
+  async _prepareContext(options) {
     const rawLevels = getPartyLevels();
     const { average, highest } = computePartyLevels(rawLevels);
 
     const activePartyLevel = this._resolvePartyLevel(average, highest);
 
-    const detectedSize = rawLevels.length || 4;
+    const detectedSize  = rawLevels.length || 4;
     const activePartySize = this._overridePartySize
       ? this._manualPartySize
       : detectedSize;
 
-    const summary = summarizeEncounter(
-      this._entries,
-      activePartyLevel,
-      activePartySize
-    );
-
+    const summary    = summarizeEncounter(this._entries, activePartyLevel, activePartySize);
     const budgetBars = this._buildBudgetBars(summary.totalXP, summary.budgets);
 
     const creatures = summary.entries.filter((e) => !e.isHazard).map((e) => ({
@@ -180,21 +182,21 @@ export class EncounterBuilder extends Application {
     return {
       detectedSize,
       activePartySize,
-      overridePartySize: this._overridePartySize,
-      manualPartySize: this._manualPartySize,
-      averageLevel: average,
-      highestLevel: highest,
-      manualPartyLevel: this._manualPartyLevel,
-      partyLevelMode: this._partyLevelMode,
+      overridePartySize:    this._overridePartySize,
+      manualPartySize:      this._manualPartySize,
+      averageLevel:         average,
+      highestLevel:         highest,
+      manualPartyLevel:     this._manualPartyLevel,
+      partyLevelMode:       this._partyLevelMode,
       activePartyLevel,
       partyLevelModeAverage: this._partyLevelMode === "average",
       partyLevelModeHighest: this._partyLevelMode === "highest",
       partyLevelModeManual:  this._partyLevelMode === "manual",
       creatures,
       hazards,
-      totalXP: summary.totalXP,
-      difficulty: summary.difficulty,
-      budgets: summary.budgets,
+      totalXP:      summary.totalXP,
+      difficulty:   summary.difficulty,
+      budgets:      summary.budgets,
       budgetBars,
       hazardsExpanded: this._hazardsExpanded,
       hasCreatures: creatures.length > 0,
@@ -204,101 +206,121 @@ export class EncounterBuilder extends Application {
   }
 
   // ---------------------------------------------------------------------------
-  // Event listeners
+  // _onRender — replaces activateListeners; receives plain HTMLElement
+  // Called after every render (initial and re-renders).
   // ---------------------------------------------------------------------------
 
-  activateListeners(html) {
-    super.activateListeners(html);
+  _onRender(context, options) {
+    const html = this.element;
 
-    html.find(".party-level-mode-btn").on("click", (e) => {
-      this._setPartyLevelMode(e.currentTarget.dataset.mode);
+    // --- Party level mode buttons ---
+    html.querySelectorAll(".party-level-mode-btn").forEach((btn) => {
+      btn.addEventListener("click", () => this._setPartyLevelMode(btn.dataset.mode));
     });
 
-    html.find(".manual-party-level").on("change", (e) => {
-      const val = parseInt(e.currentTarget.value, 10);
-      if (!isNaN(val) && val >= 1 && val <= 20) {
-        this._manualPartyLevel = val;
-        game.settings.set(MODULE_ID, "manualPartyLevel", val);
-        this.render(false);
-      }
+    const manualLevelInput = html.querySelector(".manual-party-level");
+    if (manualLevelInput) {
+      manualLevelInput.addEventListener("change", (e) => {
+        const val = parseInt(e.target.value, 10);
+        if (!isNaN(val) && val >= 1 && val <= 20) {
+          this._manualPartyLevel = val;
+          game.settings.set(MODULE_ID, "manualPartyLevel", val);
+          this.render();
+        }
+      });
+    }
+
+    // --- Party size override ---
+    const sizeToggle = html.querySelector(".party-size-override-toggle");
+    if (sizeToggle) {
+      sizeToggle.addEventListener("change", (e) => {
+        this._overridePartySize = e.target.checked;
+        game.settings.set(MODULE_ID, "overridePartySize", this._overridePartySize);
+        this.render();
+      });
+    }
+
+    const manualSizeInput = html.querySelector(".manual-party-size");
+    if (manualSizeInput) {
+      manualSizeInput.addEventListener("change", (e) => {
+        const val = parseInt(e.target.value, 10);
+        if (!isNaN(val) && val >= 1) {
+          this._manualPartySize = val;
+          game.settings.set(MODULE_ID, "manualPartySize", val);
+          this.render();
+        }
+      });
+    }
+
+    // --- Elite / Weak adjustment buttons ---
+    html.querySelectorAll(".adjustment-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const entryId = btn.closest("[data-entry-id]")?.dataset.entryId;
+        if (entryId) this._setAdjustment(entryId, btn.dataset.adjustment);
+      });
     });
 
-    html.find(".party-size-override-toggle").on("change", (e) => {
-      this._overridePartySize = e.currentTarget.checked;
-      game.settings.set(MODULE_ID, "overridePartySize", this._overridePartySize);
-      this.render(false);
+    // --- Remove entry buttons ---
+    html.querySelectorAll(".remove-entry-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const entryId = btn.closest("[data-entry-id]")?.dataset.entryId;
+        if (entryId) this._removeEntry(entryId);
+      });
     });
 
-    html.find(".manual-party-size").on("change", (e) => {
-      const val = parseInt(e.currentTarget.value, 10);
-      if (!isNaN(val) && val >= 1) {
-        this._manualPartySize = val;
-        game.settings.set(MODULE_ID, "manualPartySize", val);
-        this.render(false);
-      }
-    });
-
-    html.find(".adjustment-btn").on("click", (e) => {
-      const entryId = e.currentTarget.closest("[data-entry-id]").dataset.entryId;
-      this._setAdjustment(entryId, e.currentTarget.dataset.adjustment);
-    });
-
-    html.find(".remove-entry-btn").on("click", (e) => {
-      this._removeEntry(e.currentTarget.closest("[data-entry-id]").dataset.entryId);
-    });
-
-    html.find(".clear-creatures-btn").on("click", () => {
+    // --- Clear buttons ---
+    html.querySelector(".clear-creatures-btn")?.addEventListener("click", () => {
       this._entries = this._entries.filter((e) => e.isHazard);
-      this.render(false);
+      this.render();
     });
 
-    html.find(".clear-hazards-btn").on("click", () => {
+    html.querySelector(".clear-hazards-btn")?.addEventListener("click", () => {
       this._entries = this._entries.filter((e) => !e.isHazard);
-      this.render(false);
+      this.render();
     });
 
-    html.find(".hazards-toggle-btn").on("click", () => {
+    // --- Hazards collapse toggle ---
+    html.querySelector(".hazards-toggle-btn")?.addEventListener("click", () => {
       this._hazardsExpanded = !this._hazardsExpanded;
       game.settings.set(MODULE_ID, "hazardsExpanded", this._hazardsExpanded);
-      this.render(false);
+      this.render();
     });
 
-    // Create Scene button (v2)
-    html.find(".create-scene-btn").on("click", () => {
-      this._onCreateScene();
-    });
-	
-	// Add to Combat Tracker button (v2)
-	html.find(".add-to-tracker-btn").on("click", () => {
-	this._onAddToTracker();
-	});
+    // --- Scene / tracker action buttons ---
+    html.querySelector(".create-scene-btn")?.addEventListener("click", () => this._onCreateScene());
+    html.querySelector(".add-to-tracker-btn")?.addEventListener("click", () => this._onAddToTracker());
+    html.querySelector(".push-to-scene-btn")?.addEventListener("click", () => this._onPushToScene());
 
-// Push to Scene button (v2)
-html.find(".push-to-scene-btn").on("click", () => {
-  this._onPushToScene();
-});
-
-    const dropZone = html.find(".encounter-drop-zone")[0];
-    if (dropZone) {
-      dropZone.addEventListener("dragover", this._onDragOver.bind(this));
-      dropZone.addEventListener("drop",     this._onDrop.bind(this));
-    }
-
-    const hazardDropZone = html.find(".hazard-drop-zone")[0];
-    if (hazardDropZone) {
-      hazardDropZone.addEventListener("dragover", this._onDragOver.bind(this));
-      hazardDropZone.addEventListener("drop",     this._onDrop.bind(this));
-    }
+    // --- Drop zones ---
+    this._activateDropZone(html.querySelector(".encounter-drop-zone"));
+    this._activateDropZone(html.querySelector(".hazard-drop-zone"));
   }
 
   // ---------------------------------------------------------------------------
-  // Drag and drop
+  // Drop zone wiring (plain DOM — no jQuery, no DragDrop helper needed here
+  // because we're handling arbitrary actor UUIDs, not Foundry Documents)
   // ---------------------------------------------------------------------------
 
-  _onDragOver(event) {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
+  _activateDropZone(zone) {
+    if (!zone) return;
+
+    zone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      zone.classList.add("dragover");
+    });
+
+    zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
+
+    zone.addEventListener("drop", (e) => {
+      zone.classList.remove("dragover");
+      this._onDrop(e);
+    });
   }
+
+  // ---------------------------------------------------------------------------
+  // Drag and drop — logic unchanged, just wired differently
+  // ---------------------------------------------------------------------------
 
   async _onDrop(event) {
     event.preventDefault();
@@ -342,20 +364,20 @@ html.find(".push-to-scene-btn").on("click", () => {
     const complex = hazard ? isComplexHazard(actor) : false;
 
     this._entries.push({
-      id:        uid(),
-      name:      actor.name,
-      baseLevel: level,
+      id:         uid(),
+      name:       actor.name,
+      baseLevel:  level,
       adjustment: "none",
-      isHazard:  hazard,
-      isComplex: complex,
-      actorUuid: actor.uuid ?? null,
+      isHazard:   hazard,
+      isComplex:  complex,
+      actorUuid:  actor.uuid ?? null,
     });
 
-    this.render(false);
+    this.render();
   }
 
   // ---------------------------------------------------------------------------
-  // Create Scene (v2)
+  // Create Scene
   // ---------------------------------------------------------------------------
 
   async _onCreateScene() {
@@ -363,89 +385,36 @@ html.find(".push-to-scene-btn").on("click", () => {
       return ui.notifications.warn("Encounter Builder: Add some creatures or hazards before creating a scene.");
     }
 
-    // Step 1 — Prompt for scene name
     const sceneName = await this._promptForSceneName();
     if (!sceneName) return;
 
     ui.notifications.info("Encounter Builder: Creating scene...");
 
     try {
-      // Step 2 — Create the blank scene
-      const gridSize   = 100;
-      const sceneWidth = 4000;
+      const gridSize    = 100;
+      const sceneWidth  = 4000;
       const sceneHeight = 3000;
 
       const [scene] = await Scene.createDocuments([{
         name: sceneName,
         width: sceneWidth,
         height: sceneHeight,
-        grid: {
-          type: 1,
-          size: gridSize,
-        },
+        grid: { type: 1, size: gridSize },
         padding: 0.25,
         backgroundColor: "#000000",
         tokenVision: false,
       }]);
 
-      // Step 3 — Calculate spiral positions around scene center
       const cx = Math.floor(sceneWidth  / 2 / gridSize) * gridSize;
       const cy = Math.floor(sceneHeight / 2 / gridSize) * gridSize;
       const positions = spiralPositions(this._entries.length, cx, cy, gridSize);
 
-      // Step 4 — Import actors and build token data
-      const tokenDatas = [];
-
-      for (let i = 0; i < this._entries.length; i++) {
-        const entry = this._entries[i];
-        const pos   = positions[i];
-
-        let worldActor = null;
-
-        if (entry.actorUuid) {
-          try {
-            const sourceActor = await fromUuid(entry.actorUuid);
-            if (sourceActor?.compendium) {
-              worldActor = await game.actors.importFromCompendium(
-                sourceActor.compendium,
-                sourceActor.id,
-                {},
-                { keepId: false }
-              );
-            }
-          } catch (err) {
-            console.warn(`${MODULE_ID} | Could not import ${entry.name} from compendium:`, err);
-          }
-        }
-
-        // Fallback: minimal world actor if import failed or no UUID
-        if (!worldActor) {
-          const [fallback] = await Actor.createDocuments([{
-            name: entry.name,
-            type: entry.isHazard ? "hazard" : "npc",
-          }]);
-          worldActor = fallback;
-        }
-
-        // Build token document at the spiral position
-        const tokenDoc = await worldActor.getTokenDocument({
-          x: pos.x,
-          y: pos.y,
-          hidden: false,
-        });
-
-        tokenDatas.push(tokenDoc.toObject());
-      }
-
-      // Step 5 — Place all tokens in one batch
+      const tokenDatas = await this._buildTokenDatas(this._entries, positions);
       await scene.createEmbeddedDocuments("Token", tokenDatas);
-
-      // Step 6 — Activate the scene
       await scene.activate();
 
       ui.notifications.info(`Encounter Builder: Scene "${sceneName}" created with ${this._entries.length} token(s).`);
 
-      // Step 7 — Ask GM whether to keep the builder open
       const keepOpen = await this._promptKeepOpen();
       if (!keepOpen) this.close();
 
@@ -455,236 +424,148 @@ html.find(".push-to-scene-btn").on("click", () => {
     }
   }
 
-// ---------------------------------------------------------------------------
-// Add to Combat Tracker (v2)
-// ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Add to Combat Tracker
+  // ---------------------------------------------------------------------------
 
-async _onAddToTracker() {
-  if (this._entries.length === 0) {
-    return ui.notifications.warn("Encounter Builder: Add some creatures or hazards first.");
-  }
-
-  try {
-    let combat = game.combat;
-
-    // Step 1 — Handle existing combat
-    if (combat) {
-      const replace = await this._promptReplaceOrAppend();
-      if (replace === null) return; // GM cancelled
-
-      if (replace) {
-        // Clear existing combatants
-        await combat.deleteEmbeddedDocuments(
-          "Combatant",
-          combat.combatants.map((c) => c.id)
-        );
-      }
-    } else {
-      // Step 2 — No active combat, create one
-      combat = await Combat.create({ scene: null });
-      await combat.activate();
+  async _onAddToTracker() {
+    if (this._entries.length === 0) {
+      return ui.notifications.warn("Encounter Builder: Add some creatures or hazards first.");
     }
 
-    // Step 3 — Import fresh actor copies and add as combatants
-    const combatantDatas = [];
+    try {
+      let combat = game.combat;
 
-    for (const entry of this._entries) {
-      let worldActor = null;
-
-      if (entry.actorUuid) {
-        try {
-          const sourceActor = await fromUuid(entry.actorUuid);
-          if (sourceActor?.compendium) {
-            worldActor = await game.actors.importFromCompendium(
-              sourceActor.compendium,
-              sourceActor.id,
-              {},
-              { keepId: false }
-            );
-          }
-        } catch (err) {
-          console.warn(`${MODULE_ID} | Could not import ${entry.name}:`, err);
+      if (combat) {
+        const replace = await this._promptReplaceOrAppend();
+        if (replace === null) return;
+        if (replace) {
+          await combat.deleteEmbeddedDocuments(
+            "Combatant",
+            combat.combatants.map((c) => c.id)
+          );
         }
+      } else {
+        combat = await Combat.create({ scene: null });
+        await combat.activate();
       }
 
-      // Fallback: minimal world actor
-      if (!worldActor) {
-        const [fallback] = await Actor.createDocuments([{
-          name: entry.name,
-          type: entry.isHazard ? "hazard" : "npc",
-        }]);
-        worldActor = fallback;
+      const combatantDatas = [];
+      for (const entry of this._entries) {
+        const worldActor = await this._resolveOrCreateActor(entry);
+        combatantDatas.push({ actorId: worldActor.id, hidden: false });
       }
 
-      combatantDatas.push({ actorId: worldActor.id, hidden: false });
+      await combat.createEmbeddedDocuments("Combatant", combatantDatas);
+      await combat.rollAll();
+
+      ui.notifications.info(`Encounter Builder: ${this._entries.length} combatant(s) added to the Combat Tracker.`);
+
+      const keepOpen = await this._promptKeepOpen();
+      if (!keepOpen) this.close();
+
+    } catch (err) {
+      console.error(`${MODULE_ID} | Error adding to Combat Tracker:`, err);
+      ui.notifications.error("Encounter Builder: Something went wrong. Check the console for details.");
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Push to Scene
+  // ---------------------------------------------------------------------------
+
+  async _onPushToScene() {
+    if (this._entries.length === 0) {
+      return ui.notifications.warn("Encounter Builder: Add some creatures or hazards before pushing to a scene.");
     }
 
-    // Step 4 — Add all combatants in one batch
-    await combat.createEmbeddedDocuments("Combatant", combatantDatas);
+    const sceneId = await this._promptPickScene();
+    if (!sceneId) return;
 
-    // Step 5 — Roll initiative for all combatants
-    await combat.rollAll();
+    const scene = game.scenes.get(sceneId);
+    if (!scene) {
+      return ui.notifications.warn("Encounter Builder: Could not find that scene.");
+    }
 
-    ui.notifications.info(`Encounter Builder: ${this._entries.length} combatant(s) added to the Combat Tracker.`);
+    ui.notifications.info("Encounter Builder: Pushing tokens to scene...");
 
-    // Step 6 — Ask GM whether to keep the builder open
-    const keepOpen = await this._promptKeepOpen();
-    if (!keepOpen) this.close();
+    try {
+      const gridSize = scene.grid.size ?? 100;
+      const cx = Math.floor(scene.width  / 2 / gridSize) * gridSize;
+      const cy = Math.floor(scene.height / 2 / gridSize) * gridSize;
+      const positions = spiralPositions(this._entries.length, cx, cy, gridSize);
 
-  } catch (err) {
-    console.error(`${MODULE_ID} | Error adding to Combat Tracker:`, err);
-    ui.notifications.error("Encounter Builder: Something went wrong. Check the console for details.");
-  }
-}
+      const tokenDatas = await this._buildTokenDatas(this._entries, positions);
+      await scene.createEmbeddedDocuments("Token", tokenDatas);
 
-async _promptReplaceOrAppend() {
-  return new Promise((resolve) => {
-    new Dialog({
-      title: "Active Combat Detected",
-      content: `<p>There is already an active combat. What would you like to do?</p>`,
-      buttons: {
-        replace: {
-          label: "Clear and Replace",
-          callback: () => resolve(true),
-        },
-        append: {
-          label: "Add to Existing",
-          callback: () => resolve(false),
-        },
-        cancel: {
-          label: "Cancel",
-          callback: () => resolve(null),
-        },
-      },
-      default: "append",
-    }).render(true);
-  });
-}
+      ui.notifications.info(`Encounter Builder: ${this._entries.length} token(s) pushed to "${scene.name}".`);
 
-// ---------------------------------------------------------------------------
-// Push to Scene (v2)
-// ---------------------------------------------------------------------------
+      const keepOpen = await this._promptKeepOpen();
+      if (!keepOpen) this.close();
 
-async _onPushToScene() {
-  if (this._entries.length === 0) {
-    return ui.notifications.warn("Encounter Builder: Add some creatures or hazards before pushing to a scene.");
+    } catch (err) {
+      console.error(`${MODULE_ID} | Error pushing to scene:`, err);
+      ui.notifications.error("Encounter Builder: Something went wrong. Check the console for details.");
+    }
   }
 
-  // Step 1 — Prompt GM to pick a scene
-  const sceneId = await this._promptPickScene();
-  if (!sceneId) return;
+  // ---------------------------------------------------------------------------
+  // Shared helpers — actor resolution and token building
+  // (extracted to eliminate duplication between the three action methods)
+  // ---------------------------------------------------------------------------
 
-  const scene = game.scenes.get(sceneId);
-  if (!scene) {
-    return ui.notifications.warn("Encounter Builder: Could not find that scene.");
+  /**
+   * Resolves an entry to a world actor, importing from compendium if needed.
+   * Falls back to creating a minimal stub actor.
+   * @param {object} entry
+   * @returns {Promise<Actor>}
+   */
+  async _resolveOrCreateActor(entry) {
+    if (entry.actorUuid) {
+      try {
+        const sourceActor = await fromUuid(entry.actorUuid);
+        if (sourceActor?.compendium) {
+          return await game.actors.importFromCompendium(
+            sourceActor.compendium,
+            sourceActor.id,
+            {},
+            { keepId: false }
+          );
+        }
+        // Already a world actor
+        if (sourceActor && !sourceActor.compendium) return sourceActor;
+      } catch (err) {
+        console.warn(`${MODULE_ID} | Could not import ${entry.name}:`, err);
+      }
+    }
+
+    // Fallback: minimal stub
+    const [fallback] = await Actor.createDocuments([{
+      name: entry.name,
+      type: entry.isHazard ? "hazard" : "npc",
+    }]);
+    return fallback;
   }
 
-  ui.notifications.info("Encounter Builder: Pushing tokens to scene...");
-
-  try {
-    // Step 2 — Calculate spiral positions around scene center
-    const gridSize  = scene.grid.size ?? 100;
-    const cx = Math.floor(scene.width  / 2 / gridSize) * gridSize;
-    const cy = Math.floor(scene.height / 2 / gridSize) * gridSize;
-    const positions = spiralPositions(this._entries.length, cx, cy, gridSize);
-
-    // Step 3 — Import actors and build token data
+  /**
+   * Builds an array of token data objects for a list of entries and positions.
+   * @param {object[]} entries
+   * @param {Array<{x: number, y: number}>} positions
+   * @returns {Promise<object[]>}
+   */
+  async _buildTokenDatas(entries, positions) {
     const tokenDatas = [];
-
-    for (let i = 0; i < this._entries.length; i++) {
-      const entry = this._entries[i];
-      const pos   = positions[i];
-
-      let worldActor = null;
-
-      if (entry.actorUuid) {
-        try {
-          const sourceActor = await fromUuid(entry.actorUuid);
-          if (sourceActor?.compendium) {
-            worldActor = await game.actors.importFromCompendium(
-              sourceActor.compendium,
-              sourceActor.id,
-              {},
-              { keepId: false }
-            );
-          }
-        } catch (err) {
-          console.warn(`${MODULE_ID} | Could not import ${entry.name}:`, err);
-        }
-      }
-
-      if (!worldActor) {
-        const [fallback] = await Actor.createDocuments([{
-          name: entry.name,
-          type: entry.isHazard ? "hazard" : "npc",
-        }]);
-        worldActor = fallback;
-      }
-
-      const tokenDoc = await worldActor.getTokenDocument({
-        x: pos.x,
-        y: pos.y,
+    for (let i = 0; i < entries.length; i++) {
+      const worldActor = await this._resolveOrCreateActor(entries[i]);
+      const tokenDoc   = await worldActor.getTokenDocument({
+        x: positions[i].x,
+        y: positions[i].y,
         hidden: false,
       });
-
       tokenDatas.push(tokenDoc.toObject());
     }
-
-    // Step 4 — Place all tokens in one batch
-    await scene.createEmbeddedDocuments("Token", tokenDatas);
-
-    ui.notifications.info(`Encounter Builder: ${this._entries.length} token(s) pushed to "${scene.name}".`);
-
-    // Step 5 — Ask GM whether to keep the builder open
-    const keepOpen = await this._promptKeepOpen();
-    if (!keepOpen) this.close();
-
-  } catch (err) {
-    console.error(`${MODULE_ID} | Error pushing to scene:`, err);
-    ui.notifications.error("Encounter Builder: Something went wrong. Check the console for details.");
+    return tokenDatas;
   }
-}
-
-async _promptPickScene() {
-  return new Promise((resolve) => {
-    // Build scene options from all existing scenes
-    const scenes = game.scenes.contents;
-    if (scenes.length === 0) {
-      ui.notifications.warn("Encounter Builder: No scenes found in this world.");
-      resolve(null);
-      return;
-    }
-
-    const options = scenes
-      .map((s) => `<option value="${s.id}">${s.name}</option>`)
-      .join("");
-
-    new Dialog({
-      title: "Push to Scene",
-      content: `
-        <p>Select a scene to push tokens to:</p>
-        <div style="margin: 8px 0;">
-          <select id="scene-pick-select" style="width: 100%;">
-            ${options}
-          </select>
-        </div>
-      `,
-      buttons: {
-        confirm: {
-          label: "Push Tokens",
-          callback: (html) => {
-            resolve(html.find("#scene-pick-select").val());
-          },
-        },
-        cancel: {
-          label: "Cancel",
-          callback: () => resolve(null),
-        },
-      },
-      default: "confirm",
-    }).render(true);
-  });
-}
 
   // ---------------------------------------------------------------------------
   // Entry manipulation
@@ -694,12 +575,12 @@ async _promptPickScene() {
     const entry = this._entries.find((e) => e.id === entryId);
     if (!entry) return;
     entry.adjustment = entry.adjustment === adjustment ? "none" : adjustment;
-    this.render(false);
+    this.render();
   }
 
   _removeEntry(entryId) {
     this._entries = this._entries.filter((e) => e.id !== entryId);
-    this.render(false);
+    this.render();
   }
 
   // ---------------------------------------------------------------------------
@@ -717,7 +598,7 @@ async _promptPickScene() {
   _setPartyLevelMode(mode) {
     this._partyLevelMode = mode;
     game.settings.set(MODULE_ID, "partyLevelMode", mode);
-    this.render(false);
+    this.render();
   }
 
   // ---------------------------------------------------------------------------
@@ -737,89 +618,162 @@ async _promptPickScene() {
   }
 
   // ---------------------------------------------------------------------------
-  // Dialogs
+  // Dialogs — updated to use foundry.applications.api.DialogV2
   // ---------------------------------------------------------------------------
 
   async _promptForSceneName() {
     return new Promise((resolve) => {
-      new Dialog({
-        title: "Create Encounter Scene",
+      new foundry.applications.api.DialogV2({
+        window: { title: "Create Encounter Scene" },
         content: `
           <p>Enter a name for the new scene:</p>
           <div style="margin: 8px 0;">
             <input type="text"
                    id="scene-name-input"
                    placeholder="e.g. Goblin Ambush"
+                   autofocus
                    style="width: 100%; box-sizing: border-box;" />
           </div>
         `,
-        buttons: {
-          confirm: {
+        buttons: [
+          {
             label: "Create Scene",
-            callback: (html) => {
-              const val = html.find("#scene-name-input").val().trim();
+            default: true,
+            action: "confirm",
+            callback: (event, button, dialog) => {
+              const val = dialog.element.querySelector("#scene-name-input")?.value?.trim();
               resolve(val || "Unnamed Encounter");
             },
           },
-          cancel: {
+          {
             label: "Cancel",
+            action: "cancel",
             callback: () => resolve(null),
           },
-        },
-        default: "confirm",
-        render: (html) => {
-          setTimeout(() => html.find("#scene-name-input").focus(), 50);
-        },
+        ],
       }).render(true);
     });
   }
 
   async _promptForLevel(actorName) {
     return new Promise((resolve) => {
-      new Dialog({
-        title: "Set Creature Level",
+      new foundry.applications.api.DialogV2({
+        window: { title: "Set Creature Level" },
         content: `
           <p><strong>${actorName}</strong> doesn't have a detectable level.</p>
           <p>Enter its level manually:</p>
           <div style="margin: 8px 0;">
             <input type="number" id="manual-level-input" min="-1" max="25" value="1"
-              style="width: 80px; text-align: center;" />
+              autofocus style="width: 80px; text-align: center;" />
           </div>
         `,
-        buttons: {
-          confirm: {
+        buttons: [
+          {
             label: "Add to Encounter",
-            callback: (html) => {
-              const val = parseInt(html.find("#manual-level-input").val(), 10);
+            default: true,
+            action: "confirm",
+            callback: (event, button, dialog) => {
+              const val = parseInt(dialog.element.querySelector("#manual-level-input")?.value, 10);
               resolve(isNaN(val) ? 1 : val);
             },
           },
-          cancel: {
+          {
             label: "Cancel",
+            action: "cancel",
             callback: () => resolve(null),
           },
-        },
-        default: "confirm",
+        ],
       }).render(true);
     });
   }
 
   async _promptKeepOpen() {
     return new Promise((resolve) => {
-      new Dialog({
-        title: "Scene Created",
+      new foundry.applications.api.DialogV2({
+        window: { title: "Scene Created" },
         content: `<p>Scene created successfully! Would you like to keep the Encounter Builder open?</p>`,
-        buttons: {
-          keep: {
+        buttons: [
+          {
             label: "Keep Open",
+            default: true,
+            action: "keep",
             callback: () => resolve(true),
           },
-          close: {
+          {
             label: "Close Builder",
+            action: "close",
             callback: () => resolve(false),
           },
-        },
-        default: "keep",
+        ],
+      }).render(true);
+    });
+  }
+
+  async _promptReplaceOrAppend() {
+    return new Promise((resolve) => {
+      new foundry.applications.api.DialogV2({
+        window: { title: "Active Combat Detected" },
+        content: `<p>There is already an active combat. What would you like to do?</p>`,
+        buttons: [
+          {
+            label: "Add to Existing",
+            default: true,
+            action: "append",
+            callback: () => resolve(false),
+          },
+          {
+            label: "Clear and Replace",
+            action: "replace",
+            callback: () => resolve(true),
+          },
+          {
+            label: "Cancel",
+            action: "cancel",
+            callback: () => resolve(null),
+          },
+        ],
+      }).render(true);
+    });
+  }
+
+  async _promptPickScene() {
+    return new Promise((resolve) => {
+      const scenes = game.scenes.contents;
+      if (scenes.length === 0) {
+        ui.notifications.warn("Encounter Builder: No scenes found in this world.");
+        resolve(null);
+        return;
+      }
+
+      const options = scenes
+        .map((s) => `<option value="${s.id}">${s.name}</option>`)
+        .join("");
+
+      new foundry.applications.api.DialogV2({
+        window: { title: "Push to Scene" },
+        content: `
+          <p>Select a scene to push tokens to:</p>
+          <div style="margin: 8px 0;">
+            <select id="scene-pick-select" style="width: 100%;">
+              ${options}
+            </select>
+          </div>
+        `,
+        buttons: [
+          {
+            label: "Push Tokens",
+            default: true,
+            action: "confirm",
+            callback: (event, button, dialog) => {
+              resolve(dialog.element.querySelector("#scene-pick-select")?.value ?? null);
+            },
+          },
+          {
+            label: "Cancel",
+            action: "cancel",
+            callback: () => resolve(null),
+          },
+        ],
       }).render(true);
     });
   }
