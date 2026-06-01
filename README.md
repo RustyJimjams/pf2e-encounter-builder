@@ -42,10 +42,12 @@ https://raw.githubusercontent.com/RustyJimjams/pf2e-encounter-builder/main/modul
 
 ## Known Issues
 
-- The `Application` window class is deprecated as of Foundry v13 and will be removed in v16. Migration to `ApplicationV2` is planned.
 - Token placement on created scenes is approximate — tokens are clustered near center but may not be pixel-perfect on the grid.
 
 ## Changelog
+
+### 0.4.0
+- Migration to ApplicationV2
 
 ### 0.3.0
 - Added Push to Scene — select an existing scene from a list and push encounter tokens onto it without creating a new scene
