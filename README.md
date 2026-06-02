@@ -48,6 +48,7 @@ https://raw.githubusercontent.com/RustyJimjams/pf2e-encounter-builder/main/modul
 
 ### 0.4.0
 - Migration to ApplicationV2
+- Encounter Generation
 
 ### 0.3.0
 - Added Push to Scene — select an existing scene from a list and push encounter tokens onto it without creating a new scene
