@@ -11,6 +11,6 @@
     "esmodules": ["scripts/main.js"],
     "styles": ["styles/encounter-builder.css"],
     "languages": [{"lang": "en", "name": "English", "path": "lang/en.json"}],
-    "manifest": "https://raw.githubusercontent.com/[RustyJimjams]/pf2e-encounter-builder/main/module.json",
-    "download": "https://github.com/[RustyJimjams]/pf2e-encounter-builder/archive/refs/heads/main.zip"
+    "manifest": "https://raw.githubusercontent.com/RustyJimjams/pf2e-encounter-builder/main/module.json",
+    "download": "https://github.com/RustyJimjams/pf2e-encounter-builder/archive/refs/heads/main.zip"
 }

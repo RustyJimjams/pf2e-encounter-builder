@@ -8,7 +8,7 @@
         "minimum": "13",
         "verified": "14"
     },
-    "esmodules": ["scripts/main.js"],
+    "esmodules": ["scripts/main.js", "scripts/encounter-generator.js"],
     "styles": ["styles/encounter-builder.css"],
     "languages": [{"lang": "en", "name": "English", "path": "lang/en.json"}],
     "manifest": "https://raw.githubusercontent.com/RustyJimjams/pf2e-encounter-builder/main/module.json",
