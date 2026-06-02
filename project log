@@ -1,0 +1,81 @@
+# PF2e Encounter Builder — Project Log
+
+---
+
+## v0.4.0 — Encounter Generation
+
+### Overview
+
+This update adds automated encounter generation to the builder. Two new buttons sit at the top of the window: **Suggest Encounter** for a quick random roll, and **Generate Encounter** for theme-driven creation. Both feed into the existing entry list, so the GM can tweak the result and use the same Create Scene / Push to Scene / Add to Combat Tracker buttons as before.
+
+---
+
+### New Features
+
+#### Suggest Encounter
+A one-click random encounter generator. Picks a difficulty tier at random and searches all eligible actor compendiums for creatures within the party's level range, then assembles a balanced encounter that fills the XP budget as closely as possible. Good for when you need something fast and don't have a specific theme in mind.
+
+#### Generate Encounter
+Opens a dialog asking for two things:
+
+- **Theme / Traits** — a free-text field. Type anything: `undead crypt`, `fey forest`, `fire giant`, `sea serpent cave`. Leave it blank for a fully random result. The generator parses the input into search terms and matches them against creature traits first, falling back to names and descriptions if the trait pool is too thin.
+- **How spicy do you want this? 🌶** — a three-option picker that maps to difficulty:
+  - 🌶 **Mild** — Low difficulty
+  - 🌶🌶 **Medium** — Moderate difficulty
+  - 🌶🌶🌶 **Hot** — Severe difficulty
+
+#### Pending Suggestion Panel
+After generation, results appear in a preview panel above the main entry list rather than being added immediately. The GM can:
+
+- **Accept** — adds all suggested creatures to the encounter list
+- **Reroll** — generates a fresh suggestion with the same settings
+- **Discard** — throws the suggestion away without changing anything
+
+This means generation is always non-destructive. An existing encounter is never overwritten without explicit acceptance.
+
+---
+
+### How the Generator Works
+
+#### Compendium Search
+The generator queries every enabled Actor-type compendium in the world using `getDocuments()`. This is intentionally thorough — it works with core bestiaries, third-party content, and homebrew compendiums equally, as long as creatures are tagged with traits in the standard PF2e format. Compendiums whose IDs indicate PC-facing content (classes, archetypes, ancestries, backgrounds, equipment, spells, feats, heritages) are automatically skipped.
+
+Creatures that appear in multiple compendiums at the same name and level are deduplicated so the pool stays clean.
+
+#### Trait Matching
+Search terms parsed from the theme input are matched against creature traits first (high confidence, 10 points per match). If the trait pool is below a threshold of 10 candidates, the search expands to creature names and descriptions as a fallback. Results are scored and sorted, so the closest matches surface first.
+
+#### Budget Filling
+The generator shuffles the scored pool and greedily adds creatures until the XP budget is reached. It will allow the final pick to push slightly over budget — by design. The GM can toggle the **Weak** template on any creature to bring the total back in line, which is the same workflow used for manual encounter building.
+
+---
+
+### Performance Note
+
+**Encounter generation can take several seconds**, particularly on first use or in worlds with large compendium collections. The PF2e core bestiaries alone contain hundreds of actors, and each pack must be fully loaded (`getDocuments()`) to access trait data. Progress notifications display in the top-left corner of Foundry while the search is running so it's clear the module is working and hasn't hung. Subsequent generations within the same session may be faster depending on whether Foundry has cached the compendium data.
+
+---
+
+### New File
+
+`encounter-generator.js` — all compendium search, scoring, and budget assembly logic. Added to `esmodules` in `module.json`. Kept separate from the main class so the generation logic is independently readable and testable.
+
+---
+
+### Also in This Update — v0.3.x (ApplicationV2 Migration)
+
+The module was migrated from the deprecated Foundry `Application` base class to `ApplicationV2` + `HandlebarsApplicationMixin`. This resolves the deprecation warning introduced in Foundry v13 and ensures forward compatibility through v16 and beyond. The migration was internal — no change to the module's behaviour or appearance.
+
+Key technical changes:
+- `static DEFAULT_OPTIONS` replaces `static defaultOptions`
+- `_prepareContext()` replaces `getData()`
+- `_onRender()` replaces `activateListeners()` — plain DOM, no jQuery
+- All dialogs updated from `Dialog` to `DialogV2`
+- `getSceneControlButtons` hook handles both the v13+ object shape and the older array shape for backwards compatibility
+
+---
+
+### Known Issues (Ongoing)
+
+- Token placement on created or targeted scenes is approximate — tokens cluster near centre but are not pixel-perfect to the grid.
+- Homebrew compendium support depends on creators following standard PF2e trait conventions. Untagged creatures will not appear in themed generation results.
