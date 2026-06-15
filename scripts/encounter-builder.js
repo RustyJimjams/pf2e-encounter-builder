@@ -3,7 +3,7 @@
  * v0.5.0 — adds session-cached compendium index and in-window compendium selector.
  */
 
-import { MODULE_ID } from "./main.js";
+import { MODULE_ID, resetBuilderInstance } from "./main.js";
 import { computePartyLevels, summarizeEncounter } from "./xp-calculator.js";
 import { buildIndex, generateEncounter, getAllCreatureCompendiums } from "./encounter-generator.js";
 
@@ -68,6 +68,16 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
     this._index          = null;   // the built actor index
     this._indexBuiltAt   = null;   // Date timestamp
     this._indexing       = false;  // true while buildIndex() is running
+  }
+
+  /**
+   * Override _onClose to reset the singleton reference in main.js.
+   * Without this, manually closing the window leaves a dead instance in
+   * memory; the next open attempt tries to re-render it and crashes.
+   */
+  async _onClose(options) {
+    await super._onClose(options);
+    resetBuilderInstance();
   }
 
   // ---------------------------------------------------------------------------
@@ -556,7 +566,7 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
       await scene.createEmbeddedDocuments("Token", tokenDatas);
       await scene.activate();
       ui.notifications.info(`Encounter Builder: Scene "${sceneName}" created.`);
-      if (!await this._promptKeepOpen()) this.close();
+      if (!await this._promptKeepOpen()) await this.close();
     } catch (err) {
       console.error(`${MODULE_ID} | Error creating scene:`, err);
       ui.notifications.error("Encounter Builder: Something went wrong. Check the console.");
@@ -585,7 +595,7 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
       await combat.createEmbeddedDocuments("Combatant", datas);
       await combat.rollAll();
       ui.notifications.info(`Encounter Builder: ${this._entries.length} combatant(s) added.`);
-      if (!await this._promptKeepOpen()) this.close();
+      if (!await this._promptKeepOpen()) await this.close();
     } catch (err) {
       console.error(`${MODULE_ID} | Error adding to tracker:`, err);
       ui.notifications.error("Encounter Builder: Something went wrong. Check the console.");
@@ -609,7 +619,7 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
       );
       await scene.createEmbeddedDocuments("Token", tokenDatas);
       ui.notifications.info(`Encounter Builder: ${this._entries.length} token(s) pushed to "${scene.name}".`);
-      if (!await this._promptKeepOpen()) this.close();
+      if (!await this._promptKeepOpen()) await this.close();
     } catch (err) {
       console.error(`${MODULE_ID} | Error pushing to scene:`, err);
       ui.notifications.error("Encounter Builder: Something went wrong. Check the console.");

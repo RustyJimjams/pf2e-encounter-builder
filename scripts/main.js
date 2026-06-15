@@ -10,7 +10,20 @@ export const MODULE_ID = "pf2e-encounter-builder";
 
 let _builderInstance = null;
 
+/**
+ * Called by EncounterBuilder._onClose to invalidate the singleton.
+ * Exported so the class can call back into main without a circular dep.
+ */
+export function resetBuilderInstance() {
+  _builderInstance = null;
+}
+
 function getBuilder() {
+  // If the instance exists but is no longer rendered and has been closed,
+  // discard it and create a fresh one to avoid stale ApplicationV2 state.
+  if (_builderInstance && !_builderInstance.rendered) {
+    _builderInstance = null;
+  }
   if (!_builderInstance) _builderInstance = new EncounterBuilder();
   return _builderInstance;
 }
