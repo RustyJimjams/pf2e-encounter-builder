@@ -1,5 +1,5 @@
 {{!-- encounter-builder.hbs --}}
-{{!-- v0.4.0 — adds Suggest Encounter, Generate Encounter, and pending suggestion panel --}}
+{{!-- v0.5.0 — adds index status bar and compendium selector --}}
 
 <div class="encounter-builder-app">
 
@@ -23,27 +23,49 @@
   </div>
 
   {{!-- ------------------------------------------------------------------ --}}
-  {{!-- PENDING SUGGESTION PANEL                                            --}}
+  {{!-- INDEX STATUS BAR                                                    --}}
   {{!-- ------------------------------------------------------------------ --}}
 
-  {{#if generating}}
-  <div class="eb-section eb-pending-section">
-    <div class="eb-pending-spinner">
-      <i class="fa-solid fa-spinner fa-spin"></i>
-      Searching compendiums…
-    </div>
+  <div class="eb-index-bar">
+    {{#if generating}}
+      <span class="eb-index-status eb-index-status--building">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        Building index…
+      </span>
+    {{else if indexBuilt}}
+      <span class="eb-index-status eb-index-status--ready"
+            title="{{indexActorCount}} creatures indexed from {{selectedCompendiumCount}} compendium(s)">
+        <i class="fa-solid fa-circle-check"></i>
+        Index ready &mdash; {{indexActorCount}} creatures
+        <span class="eb-index-age">({{indexAge}})</span>
+      </span>
+      <button class="rebuild-index-btn eb-index-btn" title="Rebuild the compendium index">
+        <i class="fa-solid fa-rotate"></i> Rebuild
+      </button>
+    {{else}}
+      <span class="eb-index-status eb-index-status--none">
+        <i class="fa-solid fa-circle-info"></i>
+        No index — will build on first generation
+      </span>
+    {{/if}}
+    <button class="configure-compendiums-btn eb-index-btn"
+            title="Choose which compendiums to search"
+            {{#if generating}}disabled{{/if}}>
+      <i class="fa-solid fa-sliders"></i>
+      {{selectedCompendiumCount}}/{{totalCompendiumCount}}
+    </button>
   </div>
-  {{/if}}
+
+  {{!-- ------------------------------------------------------------------ --}}
+  {{!-- PENDING SUGGESTION PANEL                                            --}}
+  {{!-- ------------------------------------------------------------------ --}}
 
   {{#if generationPending}}
   <div class="eb-section eb-pending-section">
     <div class="eb-section-header">
       <h3 class="eb-section-title">
         Suggested Encounter
-        <span class="difficulty-badge"
-              style="background-color: {{generationPending.tierColor}}">
-          {{generationPending.tierLabel}}
-        </span>
+        <span class="difficulty-badge">{{generationPending.tierLabel}}</span>
       </h3>
       <span class="total-xp">{{generationPending.totalXP}} / {{generationPending.budget}} XP</span>
     </div>
@@ -59,16 +81,13 @@
     </ul>
 
     <div class="eb-pending-actions">
-      <button class="gen-accept-btn eb-pending-btn eb-pending-btn--accept"
-              title="Add these creatures to your encounter list">
+      <button class="gen-accept-btn eb-pending-btn eb-pending-btn--accept">
         <i class="fa-solid fa-check"></i> Accept
       </button>
-      <button class="gen-reroll-btn eb-pending-btn eb-pending-btn--reroll"
-              title="Generate a different suggestion with the same settings">
+      <button class="gen-reroll-btn eb-pending-btn eb-pending-btn--reroll">
         <i class="fa-solid fa-rotate"></i> Reroll
       </button>
-      <button class="gen-discard-btn eb-pending-btn eb-pending-btn--discard"
-              title="Discard this suggestion">
+      <button class="gen-discard-btn eb-pending-btn eb-pending-btn--discard">
         <i class="fa-solid fa-xmark"></i> Discard
       </button>
     </div>
@@ -86,20 +105,20 @@
       <label class="eb-label">Party Level</label>
       <div class="party-level-modes">
         <button class="party-level-mode-btn {{#if partyLevelModeAverage}}active{{/if}}"
-                data-mode="average" title="Use average party level (rounded down)">
+                data-mode="average">
           Avg <span class="level-value">{{averageLevel}}</span>
         </button>
         <button class="party-level-mode-btn {{#if partyLevelModeHighest}}active{{/if}}"
-                data-mode="highest" title="Use highest character level">
+                data-mode="highest">
           High <span class="level-value">{{highestLevel}}</span>
         </button>
         <button class="party-level-mode-btn {{#if partyLevelModeManual}}active{{/if}}"
-                data-mode="manual" title="Set party level manually">
+                data-mode="manual">
           Manual
         </button>
         {{#if partyLevelModeManual}}
           <input class="manual-party-level" type="number" min="1" max="20"
-                 value="{{manualPartyLevel}}" title="Manual party level" />
+                 value="{{manualPartyLevel}}" />
         {{/if}}
       </div>
     </div>
@@ -120,7 +139,7 @@
         </label>
         {{#if overridePartySize}}
           <input class="manual-party-size" type="number" min="1" max="12"
-                 value="{{manualPartySize}}" title="Manual party size" />
+                 value="{{manualPartySize}}" />
         {{/if}}
         <span class="active-size-badge">{{activePartySize}} PCs</span>
       </div>
@@ -196,9 +215,7 @@
     <div class="eb-section-header">
       <h3 class="eb-section-title">Creatures</h3>
       {{#if hasCreatures}}
-        <button class="clear-creatures-btn eb-small-btn" title="Remove all creatures">
-          Clear
-        </button>
+        <button class="clear-creatures-btn eb-small-btn">Clear</button>
       {{/if}}
     </div>
 
@@ -208,8 +225,7 @@
           <li class="entry-row {{#if this.outOfRange}}out-of-range{{/if}}"
               data-entry-id="{{this.id}}">
             <span class="entry-name" title="{{this.name}}">{{this.name}}</span>
-            <span class="entry-level"
-                  title="Base: {{this.baseLevel}} / Effective: {{this.effectiveLevel}}">
+            <span class="entry-level">
               Lvl {{this.effectiveLevel}}
               {{#unless this.adjustmentNone}}
                 <em class="adjustment-tag">({{this.adjustment}})</em>
@@ -221,10 +237,8 @@
               <button class="adjustment-btn {{#if this.adjustmentWeak}}active{{/if}}"
                       data-adjustment="weak" title="Weak (-1 level)">W</button>
             </div>
-            <span class="entry-xp {{#if this.outOfRange}}warn{{/if}}"
-                  title="{{#if this.outOfRange}}Outside ±4 level range — XP may be inaccurate{{/if}}">
-              {{this.xp}} XP
-              {{#if this.outOfRange}}⚠{{/if}}
+            <span class="entry-xp {{#if this.outOfRange}}warn{{/if}}">
+              {{this.xp}} XP{{#if this.outOfRange}} ⚠{{/if}}
             </span>
             <button class="remove-entry-btn" title="Remove">✕</button>
           </li>
@@ -240,21 +254,18 @@
   </section>
 
   {{!-- ------------------------------------------------------------------ --}}
-  {{!-- HAZARDS SECTION (collapsible)                                       --}}
+  {{!-- HAZARDS SECTION                                                     --}}
   {{!-- ------------------------------------------------------------------ --}}
 
-  <section class="eb-section hazards-section {{#if hazardsExpanded}}expanded{{/if}}">
+  <section class="eb-section hazards-section">
     <div class="eb-section-header">
-      <button class="hazards-toggle-btn eb-collapse-btn"
-              title="{{#if hazardsExpanded}}Collapse{{else}}Expand{{/if}} hazards">
+      <button class="hazards-toggle-btn eb-collapse-btn">
         <span class="collapse-icon">{{#if hazardsExpanded}}▾{{else}}▸{{/if}}</span>
         <h3 class="eb-section-title">Hazards</h3>
-        {{#if hasHazards}}
-          <span class="hazard-count">({{hazards.length}})</span>
-        {{/if}}
+        {{#if hasHazards}}<span class="hazard-count">({{hazards.length}})</span>{{/if}}
       </button>
       {{#if hasHazards}}
-        <button class="clear-hazards-btn eb-small-btn" title="Remove all hazards">Clear</button>
+        <button class="clear-hazards-btn eb-small-btn">Clear</button>
       {{/if}}
     </div>
 
@@ -266,15 +277,12 @@
                 data-entry-id="{{this.id}}">
               <span class="entry-name" title="{{this.name}}">{{this.name}}</span>
               <span class="hazard-type-tag">{{#if this.isComplex}}Complex{{else}}Simple{{/if}}</span>
-              <span class="entry-level"
-                    title="Listed: {{this.baseLevel}} / Effective: {{this.effectiveLevel}}">
+              <span class="entry-level">
                 Lvl {{this.effectiveLevel}}
                 {{#if this.isComplex}}<em class="adjustment-tag">(+4)</em>{{/if}}
               </span>
-              <span class="entry-xp {{#if this.outOfRange}}warn{{/if}}"
-                    title="{{#if this.outOfRange}}Outside ±4 level range — XP may be inaccurate{{/if}}">
-                {{this.xp}} XP
-                {{#if this.outOfRange}}⚠{{/if}}
+              <span class="entry-xp {{#if this.outOfRange}}warn{{/if}}">
+                {{this.xp}} XP{{#if this.outOfRange}} ⚠{{/if}}
               </span>
               <button class="remove-entry-btn" title="Remove">✕</button>
             </li>
@@ -297,16 +305,13 @@
   {{#if hasEntries}}
   <div class="eb-create-scene-wrap">
     <button class="create-scene-btn">
-      <i class="fa-solid fa-map"></i>
-      Create Encounter Scene
+      <i class="fa-solid fa-map"></i> Create Encounter Scene
     </button>
     <button class="push-to-scene-btn">
-      <i class="fa-solid fa-map-pin"></i>
-      Push to Scene
+      <i class="fa-solid fa-map-pin"></i> Push to Scene
     </button>
     <button class="add-to-tracker-btn">
-      <i class="fa-solid fa-swords"></i>
-      Add to Combat Tracker
+      <i class="fa-solid fa-swords"></i> Add to Combat Tracker
     </button>
   </div>
   {{/if}}

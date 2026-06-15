@@ -832,3 +832,128 @@
   border-color: rgba(244, 67, 54, 0.55);
   color: #f44336;
 }
+
+/* ---------------------------------------------------------------------------
+   Index status bar
+--------------------------------------------------------------------------- */
+
+.eb-index-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  min-height: 28px;
+}
+
+.eb-index-status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #b0a090;
+}
+
+.eb-index-status--ready {
+  color: #4caf50;
+}
+
+.eb-index-status--building {
+  color: var(--color-text-hyperlink, #c8a45e);
+}
+
+.eb-index-status--none {
+  color: #b0a090;
+}
+
+.eb-index-age {
+  color: #7a7060;
+  font-size: 0.7rem;
+}
+
+.eb-index-btn {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #b0a090;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.eb-index-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #e0d8cc;
+}
+
+.eb-index-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------------
+   Compendium selector dialog
+--------------------------------------------------------------------------- */
+
+.eb-compendium-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eb-compendium-hint {
+  font-size: 0.78rem;
+  color: #b0a090;
+  margin: 0;
+}
+
+.eb-compendium-toolbar {
+  display: flex;
+  gap: 6px;
+}
+
+.eb-compendium-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.eb-compendium-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  transition: background 0.12s;
+}
+
+.eb-compendium-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.eb-compendium-name {
+  flex: 1;
+  color: #e0d8cc;
+}
+
+.eb-compendium-source {
+  font-size: 0.7rem;
+  color: #7a7060;
+  white-space: nowrap;
+}
