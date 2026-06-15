@@ -377,11 +377,14 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
       `;
     }).join("");
 
+    // Unique attribute so our delegated listener can scope itself to this dialog
+    const dialogAttr = `data-eb-compendium-dialog`;
+
     await new Promise((resolve) => {
-      new foundry.applications.api.DialogV2({
+      const dialog = new foundry.applications.api.DialogV2({
         window: { title: "Configure Generation Compendiums" },
         content: `
-          <div class="eb-compendium-selector">
+          <div class="eb-compendium-selector" ${dialogAttr}>
             <p class="eb-compendium-hint">
               Choose which compendiums the encounter generator searches.
               Fewer compendiums = faster generation.
@@ -395,16 +398,6 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
             </div>
           </div>
         `,
-        render: (event, dialog) => {
-          dialog.element.querySelector(".eb-check-all")?.addEventListener("click", () => {
-            dialog.element.querySelectorAll(".eb-compendium-check")
-              .forEach((cb) => cb.checked = true);
-          });
-          dialog.element.querySelector(".eb-uncheck-all")?.addEventListener("click", () => {
-            dialog.element.querySelectorAll(".eb-compendium-check")
-              .forEach((cb) => cb.checked = false);
-          });
-        },
         buttons: [
           {
             label: "Save",
@@ -437,7 +430,23 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
             callback: () => resolve(),
           },
         ],
-      }).render(true);
+      });
+
+      dialog.render(true).then(() => {
+        // Wire toolbar buttons directly on the rendered element —
+        // reliable regardless of which DialogV2 render callback shape
+        // this Foundry build uses.
+        const el = dialog.element;
+        if (!el) return;
+
+        el.querySelector(".eb-check-all")?.addEventListener("click", () => {
+          el.querySelectorAll(".eb-compendium-check").forEach((cb) => cb.checked = true);
+        });
+
+        el.querySelector(".eb-uncheck-all")?.addEventListener("click", () => {
+          el.querySelectorAll(".eb-compendium-check").forEach((cb) => cb.checked = false);
+        });
+      });
     });
   }
 
