@@ -1,16 +1,37 @@
 {
-    "id": "pf2e-encounter-builder",
-    "title": "PF2e Encounter Builder",
-    "description": "A GM tool for planning and balancing Pathfinder 2e encounters using the XP budget system.",
-    "version": "0.4.0",
-    "authors": [{"name": "Rusty Jimjams"}],
-    "compatibility": {
-        "minimum": "13",
-        "verified": "14"
-    },
-    "esmodules": ["scripts/main.js", "scripts/encounter-generator.js"],
-    "styles": ["styles/encounter-builder.css"],
-    "languages": [{"lang": "en", "name": "English", "path": "lang/en.json"}],
-    "manifest": "https://raw.githubusercontent.com/RustyJimjams/pf2e-encounter-builder/main/module.json",
-    "download": "https://github.com/RustyJimjams/pf2e-encounter-builder/archive/refs/heads/main.zip"
+  "id": "pf2e-encounter-builder",
+  "title": "PF2e Encounter Builder",
+  "description": "A GM tool for planning and balancing Pathfinder 2e encounters using the XP budget system.",
+  "version": "0.4.0",
+  "authors": [
+    {
+      "name": "Rusty Jimjams",
+      "flags": {}
+    }
+  ],
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14",
+    "maximum": "14"
+  },
+  "esmodules": [
+    "scripts/main.js",
+    "scripts/encounter-generator.js"
+  ],
+  "styles": [
+    {
+      "src": "styles/encounter-builder.css"
+    }
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json",
+      "flags": {}
+    }
+  ],
+  "manifest": "https://raw.githubusercontent.com/RustyJimjams/pf2e-encounter-builder/main/module.json",
+  "download": "https://github.com/RustyJimjams/pf2e-encounter-builder/archive/refs/heads/main.zip",
+  "flags": {}
 }

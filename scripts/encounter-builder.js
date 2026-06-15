@@ -77,8 +77,13 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
    */
   async _onClose(options) {
     await super._onClose(options);
-    resetBuilderInstance();
+    // Defer the singleton reset by one microtask tick so any render() calls
+    // already queued by Foundry's internal pipeline can fail gracefully
+    // rather than trying to measure a detached element's offsetWidth.
+    Promise.resolve().then(() => resetBuilderInstance());
   }
+
+
 
   // ---------------------------------------------------------------------------
   // ApplicationV2 configuration
@@ -178,6 +183,10 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
   // ---------------------------------------------------------------------------
 
   _onRender(context, options) {
+    // Guard: Foundry may fire a queued render after the window has been closed,
+    // at which point the element is detached and offsetWidth is null.
+    if (!this.element?.isConnected) return;
+
     const html = this.element;
 
     // Party level
