@@ -701,7 +701,7 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
 
   async _promptGenerationParams() {
     return new Promise((resolve) => {
-      new foundry.applications.api.DialogV2({
+      const dialog = new foundry.applications.api.DialogV2({
         window: { title: "Generate Encounter" },
         content: `
           <div style="display:flex; flex-direction:column; gap:12px; padding:4px 0;">
@@ -732,18 +732,6 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
             </div>
           </div>
         `,
-        render: (event, dialog) => {
-          dialog.element.querySelectorAll(".spice-btn").forEach((btn) => {
-            btn.closest("label").addEventListener("click", () => {
-              dialog.element.querySelectorAll(".spice-btn").forEach((b) => {
-                b.style.borderColor = "rgba(255,255,255,0.2)";
-                b.style.background  = "transparent";
-              });
-              btn.style.borderColor = "rgba(200,164,94,0.6)";
-              btn.style.background  = "rgba(200,164,94,0.15)";
-            });
-          });
-        },
         buttons: [
           {
             label: "Generate", default: true, action: "confirm",
@@ -755,7 +743,22 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
           },
           { label: "Cancel", action: "cancel", callback: () => resolve(null) },
         ],
-      }).render(true);
+      });
+
+      dialog.render(true).then(() => {
+        const el = dialog.element;
+        if (!el) return;
+        el.querySelectorAll(".spice-btn").forEach((btn) => {
+          btn.closest("label").addEventListener("click", () => {
+            el.querySelectorAll(".spice-btn").forEach((b) => {
+              b.style.borderColor = "rgba(255,255,255,0.2)";
+              b.style.background  = "transparent";
+            });
+            btn.style.borderColor = "rgba(200,164,94,0.6)";
+            btn.style.background  = "rgba(200,164,94,0.15)";
+          });
+        });
+      });
     });
   }
 
