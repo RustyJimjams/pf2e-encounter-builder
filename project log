@@ -2,6 +2,13 @@
 
 ---
 
+## v0.5.7 — Compendium Selection and Caching/Indexing
+
+### New Feature
+Added suggested feature which allows the GM to select which Compendium(s) to use for generating encounters. Also, on first run, will generate a cache/index of the selected compendiums, allowing for faster generation. *Note* The first generation will take longer as it builds the cache/index.
+
+---
+
 ## v0.4.0 — Encounter Generation
 
 ### Overview
