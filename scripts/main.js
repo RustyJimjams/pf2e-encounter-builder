@@ -19,16 +19,13 @@ export function resetBuilderInstance() {
 }
 
 function getBuilder() {
-  // If the instance exists but is no longer rendered and has been closed,
-  // discard it and create a fresh one to avoid stale ApplicationV2 state.
-  if (_builderInstance && !_builderInstance.rendered) {
-    _builderInstance = null;
-  }
   if (!_builderInstance) _builderInstance = new EncounterBuilder();
   return _builderInstance;
 }
 
 function toggleBuilder() {
+  // If _builderInstance is null here it means _onClose already reset it,
+  // so getBuilder() will create a fresh instance.
   const builder = getBuilder();
   if (builder.rendered) builder.close();
   else builder.render(true);
@@ -83,10 +80,6 @@ Hooks.once("ready", () => {
     getBuilder,
   };
 
-  setTimeout(() => {
-    const btn = document.querySelector('[data-tool="encounter-builder"]');
-    if (btn) btn.addEventListener("click", () => toggleBuilder());
-  }, 1000);
 });
 
 Hooks.on("getSceneControlButtons", (controls) => {
@@ -98,7 +91,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
     controls.tokens.tools["encounter-builder"] = {
       name: "encounter-builder", title: "Encounter Builder",
       icon: "fa-solid fa-dice-d20", button: true, visible: true,
-      onClick: () => toggleBuilder(), onChange: () => toggleBuilder(), order: 100,
+      onChange: () => toggleBuilder(), order: 100,
     };
     return;
   }
@@ -110,7 +103,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
     tokenControls.tools.push({
       name: "encounter-builder", title: "Encounter Builder",
       icon: "fa-solid fa-dice-d20", button: true, visible: true,
-      onClick: () => toggleBuilder(),
+      onChange: () => toggleBuilder(),
     });
   }
 });

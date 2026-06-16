@@ -77,8 +77,11 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
    */
   async _onClose(options) {
     this._isClosed = true;
+    // Reset the singleton synchronously before super._onClose tears down the
+    // element. Using a deferred Promise caused a race where the reset fired
+    // after a new instance was already assigned to _builderInstance.
+    resetBuilderInstance();
     await super._onClose(options);
-    Promise.resolve().then(() => resetBuilderInstance());
   }
 
   /**
