@@ -76,11 +76,19 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
    * memory; the next open attempt tries to re-render it and crashes.
    */
   async _onClose(options) {
+    this._isClosed = true;
     await super._onClose(options);
-    // Defer the singleton reset by one microtask tick so any render() calls
-    // already queued by Foundry's internal pipeline can fail gracefully
-    // rather than trying to measure a detached element's offsetWidth.
     Promise.resolve().then(() => resetBuilderInstance());
+  }
+
+  /**
+   * Foundry calls setPosition (which reads offsetWidth) from inside its
+   * render pipeline, before _onRender fires. Guard here too so a queued
+   * render after manual close doesn't crash on a detached element.
+   */
+  setPosition(position) {
+    if (this._isClosed || !this.element?.isConnected) return;
+    return super.setPosition(position);
   }
 
 
@@ -185,7 +193,7 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
   _onRender(context, options) {
     // Guard: Foundry may fire a queued render after the window has been closed,
     // at which point the element is detached and offsetWidth is null.
-    if (!this.element?.isConnected) return;
+    if (this._isClosed || !this.element?.isConnected) return;
 
     const html = this.element;
 
@@ -575,7 +583,6 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
       await scene.createEmbeddedDocuments("Token", tokenDatas);
       await scene.activate();
       ui.notifications.info(`Encounter Builder: Scene "${sceneName}" created.`);
-      if (!await this._promptKeepOpen()) await this.close();
     } catch (err) {
       console.error(`${MODULE_ID} | Error creating scene:`, err);
       ui.notifications.error("Encounter Builder: Something went wrong. Check the console.");
@@ -604,7 +611,6 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
       await combat.createEmbeddedDocuments("Combatant", datas);
       await combat.rollAll();
       ui.notifications.info(`Encounter Builder: ${this._entries.length} combatant(s) added.`);
-      if (!await this._promptKeepOpen()) await this.close();
     } catch (err) {
       console.error(`${MODULE_ID} | Error adding to tracker:`, err);
       ui.notifications.error("Encounter Builder: Something went wrong. Check the console.");
@@ -628,7 +634,6 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
       );
       await scene.createEmbeddedDocuments("Token", tokenDatas);
       ui.notifications.info(`Encounter Builder: ${this._entries.length} token(s) pushed to "${scene.name}".`);
-      if (!await this._promptKeepOpen()) await this.close();
     } catch (err) {
       console.error(`${MODULE_ID} | Error pushing to scene:`, err);
       ui.notifications.error("Encounter Builder: Something went wrong. Check the console.");
@@ -818,18 +823,6 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
     });
   }
 
-  async _promptKeepOpen() {
-    return new Promise((resolve) => {
-      new foundry.applications.api.DialogV2({
-        window: { title: "Done!" },
-        content: `<p>Would you like to keep the Encounter Builder open?</p>`,
-        buttons: [
-          { label: "Keep Open",     default: true, action: "keep",  callback: () => resolve(true) },
-          { label: "Close Builder", action: "close", callback: () => resolve(false) },
-        ],
-      }).render(true);
-    });
-  }
 
   async _promptReplaceOrAppend() {
     return new Promise((resolve) => {

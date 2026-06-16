@@ -167,6 +167,11 @@ function getBudgetForTier(tier, partySize) {
  * Loads all actors from the selected compendiums into a flat array.
  * This is the expensive step — call once per session (or on manual rebuild).
  *
+ * Strategy: use getIndex() with indexFields first to avoid triggering PF2e's
+ * strict trait validation (which logs warnings for deprecated traits like
+ * "good"/"evil" that were renamed in recent system versions). Only the fields
+ * we actually need are fetched, keeping things fast and quiet.
+ *
  * @param {Function} onProgress - Called with a status string as each pack loads
  * @returns {Promise<object[]>} - Array of lightweight actor descriptors
  */
@@ -175,37 +180,63 @@ export async function buildIndex(onProgress) {
   const seen  = new Set();
   const index = [];
 
+  // Fields we need from the index — avoids loading full documents and
+  // bypasses PF2e's DataModel validation that fires on getDocuments().
+  const INDEX_FIELDS = [
+    "system.details.level.value",
+    "system.level.value",
+    "system.traits.value",
+    "system.details.isComplex",
+  ];
+
   for (const pack of packs) {
     onProgress?.(`Loading ${pack.metadata.label ?? pack.collection}…`);
 
-    let docs;
+    let entries;
     try {
-      docs = await pack.getDocuments();
+      // getIndex() with extra fields is much faster than getDocuments() and
+      // does not run DataModel validation, so deprecated trait warnings are
+      // never triggered.
+      await pack.getIndex({ fields: INDEX_FIELDS });
+      entries = pack.index.contents;
     } catch (err) {
-      console.warn(`${MODULE_ID} | Could not load pack ${pack.collection}:`, err);
+      console.warn(`${MODULE_ID} | Could not index pack ${pack.collection}:`, err);
       continue;
     }
 
-    for (const actor of docs) {
-      if (!VALID_ACTOR_TYPES.has(actor.type)) continue;
+    for (const entry of entries) {
+      if (!VALID_ACTOR_TYPES.has(entry.type)) continue;
 
-      const level = getLevel(actor);
+      // Level from indexed fields
+      const level =
+        entry.system?.details?.level?.value ??
+        entry.system?.level?.value ??
+        null;
       if (level === null) continue;
 
       // Deduplicate by name + level
-      const key = `${actor.name?.toLowerCase()}|${level}`;
+      const key = `${entry.name?.toLowerCase()}|${level}`;
       if (seen.has(key)) continue;
       seen.add(key);
 
-      // Store a lightweight descriptor — avoid holding full actor refs in memory
+      // Traits from indexed fields — raw array of slugs
+      const rawTraits = entry.system?.traits?.value ?? [];
+      const traits = rawTraits
+        .map((t) => (typeof t === "string" ? t : t?.value ?? "").toLowerCase())
+        .filter(Boolean);
+
+      // Build searchText from name only — descriptions aren't in the index.
+      // Name-based fallback is still useful (e.g. "zombie", "skeleton").
+      const searchText = (entry.name ?? "").toLowerCase();
+
       index.push({
-        name:      actor.name,
+        name:       entry.name,
         level,
-        type:      actor.type,
-        isComplex: actor.system?.details?.isComplex ?? false,
-        uuid:      actor.uuid ?? null,
-        traits:    [...getTraits(actor)],
-        searchText: getSearchText(actor),
+        type:       entry.type,
+        isComplex:  entry.system?.details?.isComplex ?? false,
+        uuid:       entry.uuid ?? null,
+        traits,
+        searchText,
       });
     }
   }
