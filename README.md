@@ -55,6 +55,11 @@ https://raw.githubusercontent.com/RustyJimjams/pf2e-encounter-builder/main/modul
 
 ## Changelog
 
+### 0.5.7
+- Added **In-Window Compendium Selection** — Select which Compendium(s) to use with the Encounter Generator function.
+- Added Compendium indexing/caching, so Encounter Builder remembers which Compendiums to use for Generation, and accelerates encounter generation.
+- **NOTE** The first generation also builds the index, so it will be slower. Subsequent generations will be much faster. To add/change which Compendiums are being used with the Generator, click the "Rebuild" button after changing/selecting Compendiums.
+
 ### 0.4.0
 - Added **Suggest Encounter** — one-click random balanced encounter generation
 - Added **Generate Encounter** — theme and trait-driven generation with spice level picker
