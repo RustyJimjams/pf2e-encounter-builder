@@ -49,7 +49,6 @@ https://raw.githubusercontent.com/RustyJimjams/pf2e-encounter-builder/main/modul
 - Verified on Foundry v14 (Build 361) with PF2e system v8.1.2
 
 ## Known Issues
-- The Encounter Builder window glitches out when manually closed, requiring a server reset in order to resume functionality. **Current Workaround:** Leave the window open if building multiple encounters.
 - Token placement on created or targeted scenes is approximate — tokens are clustered near center but may not be pixel-perfect on the grid.
 - Homebrew compendium support depends on creators following standard PF2e trait conventions. Untagged creatures will not appear in themed generation results.
 
