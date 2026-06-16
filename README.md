@@ -22,7 +22,7 @@ A GM tool for planning and balancing Pathfinder 2e encounters from within Foundr
 - **Compendium-agnostic** — searches all enabled Actor compendiums including homebrew, as long as creatures are tagged with standard PF2e traits
 - **Non-destructive preview** — generated encounters appear in a pending panel for review; Accept, Reroll, or Discard before committing to your encounter list
 - **Budget-aware assembly** — fills the XP budget as completely as possible; one creature may push slightly over, which the GM can correct with a Weak toggle
-- - **NEW** **Compendium Selection and Caching** - Select which compendiums to use for encounter generation.
+- **NEW** **Compendium Selection and Caching** - Select which compendiums to use for encounter generation.
 
 > **Note on generation speed:** Encounter generation searches your enabled compendiums by loading full actor data. On worlds with large compendium collections — including the core PF2e bestiaries — this can take several seconds. Progress is shown via notifications in the top-left corner of Foundry while the search runs.
 
