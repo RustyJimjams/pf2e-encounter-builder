@@ -586,6 +586,7 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
       await scene.createEmbeddedDocuments("Token", tokenDatas);
       await scene.activate();
       ui.notifications.info(`Encounter Builder: Scene "${sceneName}" created.`);
+      if (!await this._promptKeepOpen()) await this.close();
     } catch (err) {
       console.error(`${MODULE_ID} | Error creating scene:`, err);
       ui.notifications.error("Encounter Builder: Something went wrong. Check the console.");
@@ -614,6 +615,7 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
       await combat.createEmbeddedDocuments("Combatant", datas);
       await combat.rollAll();
       ui.notifications.info(`Encounter Builder: ${this._entries.length} combatant(s) added.`);
+      if (!await this._promptKeepOpen()) await this.close();
     } catch (err) {
       console.error(`${MODULE_ID} | Error adding to tracker:`, err);
       ui.notifications.error("Encounter Builder: Something went wrong. Check the console.");
@@ -637,6 +639,7 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
       );
       await scene.createEmbeddedDocuments("Token", tokenDatas);
       ui.notifications.info(`Encounter Builder: ${this._entries.length} token(s) pushed to "${scene.name}".`);
+      if (!await this._promptKeepOpen()) await this.close();
     } catch (err) {
       console.error(`${MODULE_ID} | Error pushing to scene:`, err);
       ui.notifications.error("Encounter Builder: Something went wrong. Check the console.");
@@ -725,6 +728,19 @@ export class EncounterBuilder extends HandlebarsApplicationMixin(ApplicationV2) 
   // ---------------------------------------------------------------------------
   // Dialogs
   // ---------------------------------------------------------------------------
+
+  async _promptKeepOpen() {
+    return new Promise((resolve) => {
+      new foundry.applications.api.DialogV2({
+        window: { title: "Encounter Builder" },
+        content: `<p>Would you like to keep the Encounter Builder open?</p>`,
+        buttons: [
+          { label: "Keep Open",     default: true, action: "keep",  callback: () => resolve(true)  },
+          { label: "Close Builder",               action: "close", callback: () => resolve(false) },
+        ],
+      }).render(true);
+    });
+  }
 
   async _promptGenerationParams() {
     return new Promise((resolve) => {
